@@ -1,0 +1,85 @@
+<title>XAU/USD Forward Test — Live Results</title>
+<style>
+  :root { --page:#f9f9f7; --surface:#fcfcfb; --ink:#0b0b0b; --ink2:#52514e; --muted:#898781;
+          --grid:#e1e0d9; --ring:rgba(11,11,11,0.10); --pos:#2a78d6; --neg:#e34948; --cand:#fab219;
+          --mono:ui-monospace,"Cascadia Mono",Consolas,monospace; }
+  @media (prefers-color-scheme: dark) { :root { --page:#0d0d0d; --surface:#1a1a19; --ink:#fff; --ink2:#c3c2b7;
+          --grid:#2c2c2a; --ring:rgba(255,255,255,0.10); --pos:#3987e5; --neg:#e66767; } }
+  :root[data-theme="light"] { --page:#f9f9f7; --surface:#fcfcfb; --ink:#0b0b0b; --ink2:#52514e;
+          --grid:#e1e0d9; --ring:rgba(11,11,11,0.10); --pos:#2a78d6; --neg:#e34948; }
+  :root[data-theme="dark"] { --page:#0d0d0d; --surface:#1a1a19; --ink:#fff; --ink2:#c3c2b7;
+          --grid:#2c2c2a; --ring:rgba(255,255,255,0.10); --pos:#3987e5; --neg:#e66767; }
+  body { background:var(--page); color:var(--ink); font-family:system-ui,-apple-system,"Segoe UI",sans-serif;
+         margin:0; line-height:1.55; }
+  .wrap { max-width:960px; margin:0 auto; padding:40px 24px 64px; }
+  .eyebrow { font-family:var(--mono); font-size:12px; letter-spacing:.14em; text-transform:uppercase; color:var(--muted); }
+  h1 { font-size:30px; margin:6px 0 4px; } h2 { font-size:18px; margin:36px 0 10px; }
+  .sub { color:var(--ink2); max-width:70ch; }
+  .tiles { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:12px; margin-top:18px; }
+  .tile { background:var(--surface); border:1px solid var(--ring); border-radius:10px; padding:14px 16px; }
+  .tile .k { font-family:var(--mono); font-size:11px; letter-spacing:.1em; text-transform:uppercase; color:var(--muted); }
+  .tile .v { font-family:var(--mono); font-size:22px; margin-top:2px; }
+  .tile .d { font-size:12px; color:var(--ink2); }
+  .pos { color:var(--pos); } .neg { color:var(--neg); } .muted { color:var(--muted); }
+  .tblwrap { overflow-x:auto; background:var(--surface); border:1px solid var(--ring); border-radius:10px; padding:6px 14px; }
+  table { border-collapse:collapse; width:100%; font-size:13px; }
+  th { font-family:var(--mono); font-size:11px; letter-spacing:.08em; text-transform:uppercase; color:var(--muted);
+       text-align:right; padding:8px 10px; border-bottom:1px solid var(--grid); }
+  th:first-child,td:first-child { text-align:left; }
+  td { padding:7px 10px; border-bottom:1px solid var(--grid); font-variant-numeric:tabular-nums; text-align:right; }
+  tr:last-child td { border-bottom:none; }
+  ul { max-width:75ch; } li { margin-bottom:8px; }
+  .foot { margin-top:44px; padding-top:16px; border-top:1px solid var(--grid); color:var(--muted); font-size:12.5px; max-width:80ch; }
+  code { font-family:var(--mono); font-size:.92em; }
+</style>
+<div class="wrap">
+  <div class="eyebrow">XAU/USD · OANDA practice (demo money) · forward test started 2026-07-13 · review 2026-07-20</div>
+  <h1>Forward Test — Live Results</h1>
+  <p class="sub">A validated-but-unproven trend strategy trading a demo account autonomously. This page reports
+  what actually happened — including nothing happening. Generated 2026-07-15 19:19 UTC.</p>
+
+  <div class="tiles">
+    <div class="tile"><div class="k">Equity</div><div class="v">100,000.00</div><div class="d">GBP, demo</div></div>
+    <div class="tile"><div class="k">P&L</div><div class="v pos">+0.00</div><div class="d">+0.00% since start</div></div>
+    <div class="tile"><div class="k">Completed trades</div><div class="v">0</div><div class="d">expected ~2/week</div></div>
+    <div class="tile"><div class="k">Open positions</div><div class="v">0</div><div class="d">max 1 by rule</div></div>
+    <div class="tile"><div class="k">Decisions evaluated</div><div class="v">1,664</div><div class="d">every one logged with reasons</div></div>
+    <div class="tile"><div class="k">Uptime events</div><div class="v">4/0</div><div class="d">API errors handled / restarts</div></div>
+  </div>
+
+  
+  <h2>Completed trades</h2>
+  <div class="tblwrap"><table>
+    <tr><th>Entry (UTC)</th><th>Exit (UTC)</th><th>Side</th><th>Entry</th><th>Exit</th><th>Units</th><th>P&L</th><th>R</th><th>Exit reason</th></tr>
+    <tr><td colspan='9' class='muted'>No completed trades yet — the strategy has not seen a valid setup. That is the design working, not failing.</td></tr>
+  </table></div>
+  <p class="sub" style="font-size:13px">Latest decision: <code>2026-07-15T19:18 — NO_TRADE — Failed: H4 trend, H1 confirmation, ADX (no ranging market), RSI momentum, M15 pullback to EMA20, M15 confirmation candle, Liquidity session, Risk:Reward >= 1:1.5</code></p>
+
+  <h2>The maths this runs on</h2>
+  <ul>
+    <li><strong>Position sizing:</strong> units = (0.5% of balance) ÷ stop distance. The stop is 1.8×ATR(14) below entry,
+    attached to every order at the broker. One losing trade costs ≈ 0.5% of the account, by construction.</li>
+    <li><strong>Expectancy</strong> (the number that decides everything): mean profit per trade in R, where 1R = the amount risked.
+    Walk-forward out-of-sample estimate: <strong>+0.273R over 198 trades</strong> (PF 1.56) — treated as an optimistic upper bound,
+    since the strategy structure was shaped on the same dataset. This forward test is the honest measurement.</li>
+    <li><strong>Trade management:</strong> at +1R the stop moves to break-even; no trailing stop (testing showed trails
+    strangled the winners); everything closes by 20:45 UTC — no overnight exposure.</li>
+    <li><strong>Hard limits:</strong> max 1 position; −2% day stops trading for the day; −5% week stops the week.
+    Sizing never depends on previous losses — no martingale, no averaging down, structurally.</li>
+    <li><strong>Expected drawdown</strong> (Monte Carlo, 1,000 reshuffles of the OOS trades): ~5% median, ~8% at the 95th
+    percentile. Beyond ~9% means the model is wrong — halt and review.</li>
+    <li><strong>Entry requires every filter to pass:</strong> H4 EMA trend alignment (long-only), H1 EMA + RSI momentum,
+    ADX ≥ 25 (no ranging markets), pullback to the M15 EMA20, acceptable volatility, London/NY session hours,
+    and ≥1.5:1 reward-to-risk room. Zero trades on a day means zero setups qualified.</li>
+  </ul>
+
+  <h2>Why so few trades?</h2>
+  <p class="sub">The strategy is long-only and gold has been in an H4 downtrend since the test began — the correct output
+  of a trend-following system in a hostile regime is silence. Historically this configuration traded about twice a week.
+  The alternative (loosening filters for more action) was tested and measurably destroys the edge.</p>
+
+  <div class="foot">This page regenerates automatically every hour during the trading day.
+  Demo account — no real money at risk or involved. Simulated/practice results do not predict real returns.
+  This is an engineering research log, not investment advice or a solicitation. Strategy: pullback trend-following,
+  validated by walk-forward testing with a REJECTED/CANDIDATE gate; full research history in the companion findings page.</div>
+</div>
