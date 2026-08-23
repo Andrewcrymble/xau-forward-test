@@ -11,7 +11,7 @@
     "typecheck": "tsc --noEmit",
     "db:migrate": "prisma migrate dev",
     "db:studio": "prisma studio",
-    "vercel-build": "node scripts/set-db-provider.mjs postgresql && prisma generate && prisma db push --skip-generate && next build"
+    "vercel-build": "node scripts/set-db-provider.mjs postgresql && prisma generate && node scripts/db-push.mjs && next build"
   },
   "dependencies": {
     "@pdf-lib/fontkit": "^1.1.1",
