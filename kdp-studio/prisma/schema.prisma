@@ -1,0 +1,146 @@
+// KDP Colouring Book Studio — database schema.
+//
+// Uses SQLite for local development. The schema deliberately avoids
+// SQLite-only or Postgres-only features (enums, Json columns) so switching
+// the datasource provider to "postgresql" requires no model changes:
+//   - status fields are strings, validated by Zod + TypeScript unions in src/lib/types.ts
+//   - structured settings are stored as JSON-encoded strings
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String    @id @default(cuid())
+  name      String
+  email     String    @unique
+  createdAt DateTime  @default(now())
+  projects  Project[]
+}
+
+model Project {
+  id     String  @id @default(cuid())
+  userId String?
+  user   User?   @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  // Book metadata
+  name        String
+  title       String
+  subtitle    String?
+  niche       String
+  description String?
+
+  // Audience / format
+  targetAudience String // TargetAudience id, e.g. "ages_4_8" | "adults" | "custom"
+  customAudience String?
+  trimSize       String @default("8.5x11") // TrimSizeId from src/lib/config/kdp-spec.ts
+  numberOfDesigns Int
+
+  // Style
+  style                String // StyleId, e.g. "clean_childrens" | "custom"
+  customStyle          String?
+  complexity           String // ComplexityId, e.g. "very_simple" .. "highly_detailed"
+  complexityOverridden Boolean @default(false)
+
+  // Interior options — JSON-encoded InteriorOptions (src/lib/types.ts)
+  interiorOptions String @default("{}")
+
+  status    String   @default("setup") // ProjectStatus
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  pages          ColouringPage[]
+  cover          Cover?
+  exports        Export[]
+  generationLogs GenerationLog[]
+}
+
+model ColouringPage {
+  id        String  @id @default(cuid())
+  projectId String
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  pageNumber Int
+  title      String
+  concept    String
+  prompt     String @default("")
+
+  // Storage keys resolved via the storage abstraction (not raw binary data)
+  originalImage  String?
+  processedImage String?
+
+  generationStatus   String @default("planned") // GenerationStatus
+  approvalStatus     String @default("pending") // ApprovalStatus
+  validationStatus   String @default("not_checked") // ValidationStatus
+  generationAttempts Int    @default(0)
+  notes              String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  versions ImageVersion[]
+
+  @@index([projectId, pageNumber])
+}
+
+// Every (re)generation keeps its result — regeneration never overwrites an
+// approved image. The page's originalImage/processedImage point at the
+// currently selected version.
+model ImageVersion {
+  id     String        @id @default(cuid())
+  pageId String
+  page   ColouringPage @relation(fields: [pageId], references: [id], onDelete: Cascade)
+
+  versionNumber  Int
+  originalImage  String
+  processedImage String?
+  createdAt      DateTime @default(now())
+
+  @@index([pageId, versionNumber])
+}
+
+model Cover {
+  id        String  @id @default(cuid())
+  projectId String  @unique
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  artwork       String?
+  title         String?
+  subtitle      String?
+  author        String?
+  backCoverText String?
+  spineText     String?
+  settings      String  @default("{}") // JSON-encoded cover editor settings
+}
+
+model Export {
+  id        String   @id @default(cuid())
+  projectId String
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  type      String // "interior_pdf" | "cover_pdf" | "kdp_package" | ...
+  filePath  String
+  createdAt DateTime @default(now())
+}
+
+// Cost / usage tracking for every AI request (text or image).
+model GenerationLog {
+  id        String   @id @default(cuid())
+  projectId String
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  kind          String // "book_plan" | "page_image" | "cover_image" | "listing" | ...
+  provider      String?
+  model         String?
+  estimatedCost Float?
+  actualCost    Float?
+  tokensUsed    Int?
+  imageCount    Int?
+  message       String?
+  createdAt     DateTime @default(now())
+}
