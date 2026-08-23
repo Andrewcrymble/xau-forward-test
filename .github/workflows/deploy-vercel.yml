@@ -81,8 +81,12 @@ jobs:
           else
             # Remove ONLY our own leftover store if a previous attempt created
             # it without linking (it is empty); never touch other stores.
+            echo "--- existing stores:"
+            vercel blob list-stores --token "$VERCEL_TOKEN" 2>&1 || true
             LINE=$(vercel blob list-stores --token "$VERCEL_TOKEN" 2>/dev/null | grep "kdp-studio-images" || true)
             STORE_ID=$(echo "$LINE" | grep -o "store_[A-Za-z0-9]*" | head -1)
+            # Known id of the unlinked store created by run #4 of this workflow.
+            STORE_ID="${STORE_ID:-store_W0n73rShL1V7ubMj}"
             if [ -n "$STORE_ID" ]; then
               echo "Removing unlinked leftover store $STORE_ID"
               vercel blob delete-store "$STORE_ID" --yes --token "$VERCEL_TOKEN" 2>&1 \
