@@ -31,6 +31,7 @@ function toDto(p: ColouringPage): PageDto {
     generationStatus: p.generationStatus as GenerationStatus,
     approvalStatus: p.approvalStatus as ApprovalStatus,
     validationStatus: p.validationStatus as ValidationStatus,
+    validationIssues: p.validationIssues,
     generationAttempts: p.generationAttempts,
     notes: p.notes,
   };

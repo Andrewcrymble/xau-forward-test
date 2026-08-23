@@ -95,6 +95,7 @@ export interface PageDto {
   generationStatus: GenerationStatus;
   approvalStatus: ApprovalStatus;
   validationStatus: ValidationStatus;
+  validationIssues: string | null;
   generationAttempts: number;
   notes: string | null;
 }

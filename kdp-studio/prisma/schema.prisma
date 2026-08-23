@@ -79,6 +79,8 @@ model ColouringPage {
   generationStatus   String @default("planned") // GenerationStatus
   approvalStatus     String @default("pending") // ApprovalStatus
   validationStatus   String @default("not_checked") // ValidationStatus
+  // Human-readable list of automatic quality-check findings, newline-separated
+  validationIssues   String?
   generationAttempts Int    @default(0)
   notes              String?
 

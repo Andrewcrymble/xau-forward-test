@@ -30,6 +30,35 @@ app automatically on every deploy.
 6. You'll get a URL like `https://kdp-studio-xxxx.vercel.app` — open it on
    any device. Add it to your iPad home screen for an app-like experience.
 
+## 3. Image storage (needed for Phase 3 image generation)
+
+Serverless hosting has no permanent disk, so generated artwork needs a
+hosted store. Vercel's own Blob storage has a free tier and is a two-minute
+setup:
+
+1. In your Vercel project, open the **Storage** tab.
+2. Click **Create Database → Blob** and connect it to the project.
+3. Vercel adds the `BLOB_READ_WRITE_TOKEN` environment variable
+   automatically — the app detects it and switches from local disk to Blob
+   with no other configuration.
+4. Redeploy (Deployments → ⋯ → Redeploy) so the new variable takes effect.
+
+## 4. OpenAI image generation
+
+With `OPENAI_API_KEY` set, colouring pages generate with **gpt-image-1**
+(portrait, then normalised to 2550 × 3300 print resolution). Optional
+variables:
+
+- `OPENAI_IMAGE_MODEL` — `gpt-image-1` (default) or `dall-e-3`
+- `OPENAI_IMAGE_QUALITY` — `low` / `medium` (default) / `high` for
+  gpt-image-1 (`standard` / `hd` for dall-e-3). Medium costs roughly
+  $0.06 per page; high roughly $0.25 per page.
+
+Note: gpt-image-1 requires a verified OpenAI organisation (a one-time step
+at platform.openai.com under Settings → Organization → Verification). If
+generation returns a 403 mentioning verification, either complete that or
+set `OPENAI_IMAGE_MODEL=dall-e-3`.
+
 ### Deploying updates
 
 Vercel redeploys automatically whenever the connected branch changes. By

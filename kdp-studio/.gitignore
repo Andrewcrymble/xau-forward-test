@@ -47,3 +47,6 @@ prisma/dev.db-journal
 
 # keep the env template
 !.env.example
+
+# generated artwork (local storage provider)
+/storage/

@@ -44,3 +44,30 @@ export interface TextAIProvider {
     req: Omit<BookPlanRequest, "count">,
   ): Promise<{ concept: PageConceptDraft; usage: TextUsage }>;
 }
+
+// ---------------------------------------------------------------------------
+// Image generation
+// ---------------------------------------------------------------------------
+
+export interface ImageGenerationRequest {
+  /** Complete prompt (already includes the master colouring-page rules). */
+  prompt: string;
+  /** Seed hint for deterministic placeholder providers (page number). */
+  seed?: number;
+}
+
+export interface GeneratedImage {
+  /** Raw image bytes as returned by the provider. */
+  data: Buffer;
+  contentType: string;
+  provider: string;
+  model: string;
+  /** Estimated cost in USD for this single generation, when known. */
+  estimatedCost?: number;
+}
+
+export interface ImageAIProvider {
+  readonly name: string;
+  /** Generate exactly ONE image for ONE colouring page. */
+  generateImage(req: ImageGenerationRequest): Promise<GeneratedImage>;
+}
