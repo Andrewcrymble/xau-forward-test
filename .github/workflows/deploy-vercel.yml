@@ -76,10 +76,13 @@ jobs:
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
         run: |
-          vercel blob store add kdp-studio-images --token "$VERCEL_TOKEN" 2>&1 \
-            || echo "blob-cli-failed"
+          vercel blob create-store kdp-studio-images --token "$VERCEL_TOKEN" 2>&1 \
+            || echo "create-store failed (may already exist) — continuing"
           echo "--- production env vars now configured:"
           vercel env ls production --token "$VERCEL_TOKEN" 2>&1 | sed 's/  */ /g' || true
+          if ! vercel env ls production --token "$VERCEL_TOKEN" 2>/dev/null | grep -q BLOB_READ_WRITE_TOKEN; then
+            echo "::warning::BLOB_READ_WRITE_TOKEN not present — connect the Blob store to the project in the Vercel dashboard (Storage tab)"
+          fi
 
       - name: Deploy to production
         env:
