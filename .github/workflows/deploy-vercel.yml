@@ -50,6 +50,14 @@ jobs:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
         run: |
           set -e
+          # Keep KDP Studio in its own Postgres schema so it can never touch
+          # other tables living in the same database.
+          case "$DATABASE_URL" in
+            *schema=*) ;;
+            *\?*) DATABASE_URL="${DATABASE_URL}&schema=kdp_studio" ;;
+            *) DATABASE_URL="${DATABASE_URL}?schema=kdp_studio" ;;
+          esac
+          echo "DATABASE_URL=$DATABASE_URL" >> "$GITHUB_ENV"
           sync_env() {
             local name="$1" value="$2"
             if [ -n "$value" ]; then
@@ -68,13 +76,16 @@ jobs:
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
         run: |
-          vercel blob store add kdp-studio-images --token "$VERCEL_TOKEN" \
-            || echo "Blob store may already exist or need a one-time dashboard click — continuing."
+          vercel blob store add kdp-studio-images --token "$VERCEL_TOKEN" 2>&1 \
+            || echo "blob-cli-failed"
+          echo "--- production env vars now configured:"
+          vercel env ls production --token "$VERCEL_TOKEN" 2>&1 | sed 's/  */ /g' || true
 
       - name: Deploy to production
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
         run: |
+          set -o pipefail
           vercel deploy --prod --yes --token "$VERCEL_TOKEN" 2>&1 | tee deploy-output.txt
           URL=$(grep -Eo 'https://[a-zA-Z0-9.-]+\.vercel\.app' deploy-output.txt | tail -1)
           echo "### Deployed: $URL" >> "$GITHUB_STEP_SUMMARY"
