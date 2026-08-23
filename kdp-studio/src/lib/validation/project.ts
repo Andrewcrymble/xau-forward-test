@@ -22,12 +22,17 @@ export const interiorOptionsSchema = z.object({
   includeBelongsToPage: z.boolean(),
   includeTestColourPage: z.boolean(),
   includeThankYouPage: z.boolean(),
+  frontMatterOrder: z
+    .array(z.enum(["titlePage", "copyrightPage", "belongsToPage", "testColourPage"]))
+    .default(["titlePage", "copyrightPage", "belongsToPage", "testColourPage"]),
+  blankPageMessage: z.boolean().default(false),
 });
 
 const baseProjectSchema = z.object({
   name: z.string().trim().min(1, "Project name is required").max(200),
   title: z.string().trim().min(1, "Book title is required").max(300),
   subtitle: z.string().trim().max(300).nullish(),
+  author: z.string().trim().max(200).nullish(),
   niche: z.string().trim().min(1, "Niche/topic is required").max(500),
   description: z.string().trim().max(2000).nullish(),
   targetAudience: z.enum(audienceIds),

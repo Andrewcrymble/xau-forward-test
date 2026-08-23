@@ -37,6 +37,15 @@ export const VALIDATION_STATUSES = [
 ] as const;
 export type ValidationStatus = (typeof VALIDATION_STATUSES)[number];
 
+/** Front-matter page kinds, in the user's chosen order. */
+export const FRONT_MATTER_KEYS = [
+  "titlePage",
+  "copyrightPage",
+  "belongsToPage",
+  "testColourPage",
+] as const;
+export type FrontMatterKey = (typeof FRONT_MATTER_KEYS)[number];
+
 /** Interior/front-matter options chosen at book setup. */
 export interface InteriorOptions {
   singleSided: boolean;
@@ -46,6 +55,10 @@ export interface InteriorOptions {
   includeBelongsToPage: boolean;
   includeTestColourPage: boolean;
   includeThankYouPage: boolean;
+  /** Order in which enabled front-matter pages appear. */
+  frontMatterOrder: FrontMatterKey[];
+  /** Print a small bleed-through note on blank pages (default OFF). */
+  blankPageMessage: boolean;
 }
 
 export const DEFAULT_INTERIOR_OPTIONS: InteriorOptions = {
@@ -56,6 +69,8 @@ export const DEFAULT_INTERIOR_OPTIONS: InteriorOptions = {
   includeBelongsToPage: false,
   includeTestColourPage: false,
   includeThankYouPage: false,
+  frontMatterOrder: ["titlePage", "copyrightPage", "belongsToPage", "testColourPage"],
+  blankPageMessage: false,
 };
 
 /** Project as exposed to the UI (interiorOptions decoded from JSON). */
@@ -64,6 +79,7 @@ export interface ProjectDto {
   name: string;
   title: string;
   subtitle: string | null;
+  author: string | null;
   niche: string;
   description: string | null;
   targetAudience: string;

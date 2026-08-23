@@ -32,6 +32,7 @@ model Project {
   name        String
   title       String
   subtitle    String?
+  author      String?
   niche       String
   description String?
 

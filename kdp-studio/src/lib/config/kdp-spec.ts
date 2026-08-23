@@ -112,3 +112,13 @@ export function calculateCoverDimensions(opts: {
 
 export const MAX_CONCURRENT_GENERATIONS = 3;
 export const MAX_GENERATION_RETRIES = 2;
+
+// ---------------------------------------------------------------------------
+// KDP paperback page-count limits (black ink, 8.5×11).
+// ---------------------------------------------------------------------------
+
+export const KDP_MIN_PAGE_COUNT = 24;
+export const KDP_MAX_PAGE_COUNT_BW = 828;
+
+/** PDF points per inch (PDF user-space unit). */
+export const PDF_POINTS_PER_INCH = 72;

@@ -44,6 +44,7 @@ const EMPTY_FORM: FormState = {
   name: "",
   title: "",
   subtitle: "",
+  author: "",
   niche: "",
   description: "",
   targetAudience: "ages_4_8",
@@ -62,6 +63,7 @@ function projectToForm(p: ProjectDto): FormState {
     name: p.name,
     title: p.title,
     subtitle: p.subtitle ?? "",
+    author: p.author ?? "",
     niche: p.niche,
     description: p.description ?? "",
     targetAudience: p.targetAudience,
@@ -247,6 +249,17 @@ export function BookSetupForm({
           value={form.subtitle ?? ""}
           onChange={(e) => update({ subtitle: e.target.value })}
           placeholder="e.g. A Relaxing Architectural Colouring Book"
+        />
+      </Field>
+      <Field
+        label="Author / pen name (optional)"
+        hint="Used on the title page, copyright page and cover"
+        error={errors.author}
+      >
+        <TextInput
+          value={form.author ?? ""}
+          onChange={(e) => update({ author: e.target.value })}
+          placeholder="e.g. A. Crymble"
         />
       </Field>
       <Field label="Niche / topic" error={errors.niche}>
@@ -440,7 +453,7 @@ export function BookSetupForm({
             key={opt.key}
             label={opt.label}
             hint={opt.hint}
-            checked={form.interiorOptions[opt.key as keyof InteriorOptions]}
+            checked={Boolean(form.interiorOptions[opt.key as keyof InteriorOptions])}
             onChange={(e) =>
               setInterior(opt.key as keyof InteriorOptions, e.target.checked)
             }
