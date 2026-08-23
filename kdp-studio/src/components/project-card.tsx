@@ -6,6 +6,7 @@ import { ProgressBar } from "@/components/ui";
 const STATUS_LABELS: Record<string, string> = {
   setup: "Setup",
   planning: "Planning",
+  plan_approved: "Plan approved",
   generating: "Generating images",
   reviewing: "Reviewing images",
   interior: "Building interior",

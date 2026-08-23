@@ -4,10 +4,16 @@ A web application for creating complete Amazon KDP-ready colouring books:
 book concept → page plan → AI image generation → review → print-ready
 interior PDF → wraparound cover → Amazon listing → export package.
 
-**Status: Phase 1 (Foundation) complete** — navigation, database, project
-creation wizard, dashboard, project setup with autosave. Later phases add
-book planning, image generation, interior/cover builders, listing generation
-and ZIP export (their tabs are visible as placeholders).
+**Status: Phase 2 (Book Planning) complete** — everything from Phase 1
+(navigation, database, project wizard, dashboard, autosaving setup) plus AI
+book-plan generation with a provider abstraction (OpenAI or a keyless
+sample generator), per-page prompt building from the central master rules,
+and full plan review: edit, reorder, replace, delete, add and approve
+concepts. Later phases add image generation, interior/cover builders,
+listing generation and ZIP export (their tabs are visible as placeholders).
+
+**Hosting:** see [DEPLOY.md](./DEPLOY.md) — browser-only setup on Vercel +
+Neon Postgres, no terminal required.
 
 ## Stack
 

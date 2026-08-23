@@ -68,7 +68,9 @@ model ColouringPage {
   pageNumber Int
   title      String
   concept    String
-  prompt     String @default("")
+  prompt     String  @default("")
+  // True once the user hand-edits the prompt; auto-rebuilds then stop.
+  promptEdited Boolean @default(false)
 
   // Storage keys resolved via the storage abstraction (not raw binary data)
   originalImage  String?

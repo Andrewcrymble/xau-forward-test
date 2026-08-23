@@ -5,6 +5,7 @@
 export const PROJECT_STATUSES = [
   "setup",
   "planning",
+  "plan_approved",
   "generating",
   "reviewing",
   "interior",
@@ -79,6 +80,23 @@ export interface ProjectDto {
   updatedAt: string;
   pageCount: number;
   approvedPageCount: number;
+}
+
+/** Colouring page as exposed to the UI. */
+export interface PageDto {
+  id: string;
+  pageNumber: number;
+  title: string;
+  concept: string;
+  prompt: string;
+  promptEdited: boolean;
+  originalImage: string | null;
+  processedImage: string | null;
+  generationStatus: GenerationStatus;
+  approvalStatus: ApprovalStatus;
+  validationStatus: ValidationStatus;
+  generationAttempts: number;
+  notes: string | null;
 }
 
 /** Standard typed API envelope used by every API route. */
