@@ -76,7 +76,7 @@ jobs:
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
         run: |
-          vercel blob create-store kdp-studio-images --token "$VERCEL_TOKEN" 2>&1 \
+          vercel blob create-store kdp-studio-images --access public --token "$VERCEL_TOKEN" 2>&1 \
             || echo "create-store failed (may already exist) — continuing"
           echo "--- production env vars now configured:"
           vercel env ls production --token "$VERCEL_TOKEN" 2>&1 | sed 's/  */ /g' || true
