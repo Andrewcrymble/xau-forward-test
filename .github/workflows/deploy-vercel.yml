@@ -76,8 +76,21 @@ jobs:
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
         run: |
-          vercel blob create-store kdp-studio-images --access public --token "$VERCEL_TOKEN" 2>&1 \
-            || echo "create-store failed (may already exist) — continuing"
+          if vercel env ls production --token "$VERCEL_TOKEN" 2>/dev/null | grep -q BLOB_READ_WRITE_TOKEN; then
+            echo "Blob storage already connected."
+          else
+            # Remove ONLY our own leftover store if a previous attempt created
+            # it without linking (it is empty); never touch other stores.
+            LINE=$(vercel blob list-stores --token "$VERCEL_TOKEN" 2>/dev/null | grep "kdp-studio-images" || true)
+            STORE_ID=$(echo "$LINE" | grep -o "store_[A-Za-z0-9]*" | head -1)
+            if [ -n "$STORE_ID" ]; then
+              echo "Removing unlinked leftover store $STORE_ID"
+              vercel blob delete-store "$STORE_ID" --yes --token "$VERCEL_TOKEN" 2>&1 \
+                || vercel blob delete-store "$STORE_ID" --token "$VERCEL_TOKEN" 2>&1 || true
+            fi
+            # --yes links the new store to the project (provisions BLOB_READ_WRITE_TOKEN)
+            vercel blob create-store kdp-studio-images --access public --yes --token "$VERCEL_TOKEN" 2>&1 || true
+          fi
           echo "--- production env vars now configured:"
           vercel env ls production --token "$VERCEL_TOKEN" 2>&1 | sed 's/  */ /g' || true
           if ! vercel env ls production --token "$VERCEL_TOKEN" 2>/dev/null | grep -q BLOB_READ_WRITE_TOKEN; then
