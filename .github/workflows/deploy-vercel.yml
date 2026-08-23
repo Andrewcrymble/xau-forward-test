@@ -1,0 +1,81 @@
+name: Deploy KDP Studio to Vercel
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [claude/kdp-colouring-book-studio-1s7szl]
+    paths: ["kdp-studio/**"]
+
+concurrency:
+  group: vercel-deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: kdp-studio
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Check secrets
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: |
+          if [ -z "$VERCEL_TOKEN" ]; then
+            echo "::error::Missing repository secret VERCEL_TOKEN (create at vercel.com/account/tokens)"; exit 1
+          fi
+          if [ -z "$DATABASE_URL" ]; then
+            echo "::error::Missing repository secret DATABASE_URL (Neon connection string)"; exit 1
+          fi
+
+      - name: Install Vercel CLI
+        run: npm install -g vercel@latest
+
+      - name: Link (or create) Vercel project
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+        run: vercel link --yes --project kdp-studio --token "$VERCEL_TOKEN"
+
+      - name: Sync environment variables to Vercel
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        run: |
+          set -e
+          sync_env() {
+            local name="$1" value="$2"
+            if [ -n "$value" ]; then
+              vercel env rm "$name" production --yes --token "$VERCEL_TOKEN" >/dev/null 2>&1 || true
+              printf '%s' "$value" | vercel env add "$name" production --token "$VERCEL_TOKEN"
+              echo "synced $name"
+            else
+              echo "skipping $name (secret not set)"
+            fi
+          }
+          sync_env DATABASE_URL "$DATABASE_URL"
+          sync_env OPENAI_API_KEY "$OPENAI_API_KEY"
+
+      - name: Ensure Blob storage for generated artwork
+        continue-on-error: true
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+        run: |
+          vercel blob store add kdp-studio-images --token "$VERCEL_TOKEN" \
+            || echo "Blob store may already exist or need a one-time dashboard click — continuing."
+
+      - name: Deploy to production
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+        run: |
+          vercel deploy --prod --yes --token "$VERCEL_TOKEN" 2>&1 | tee deploy-output.txt
+          URL=$(grep -Eo 'https://[a-zA-Z0-9.-]+\.vercel\.app' deploy-output.txt | tail -1)
+          echo "### Deployed: $URL" >> "$GITHUB_STEP_SUMMARY"
+          echo "PRODUCTION_URL=$URL"
