@@ -7,12 +7,13 @@ import type { ApiResponse, PageDto } from "@/lib/types";
 export const maxDuration = 120;
 
 export async function POST(
-  _req: NextRequest,
+  req: NextRequest,
   ctx: { params: Promise<{ id: string }> },
 ): Promise<NextResponse<ApiResponse<PageDto[]>>> {
   const { id } = await ctx.params;
   try {
-    const pages = await generatePlan(id);
+    const body = await req.json().catch(() => ({}));
+    const pages = await generatePlan(id, { force: body?.force === true });
     return NextResponse.json({ ok: true, data: pages });
   } catch (err) {
     return apiError(`POST /api/projects/${id}/plan/generate`, err);

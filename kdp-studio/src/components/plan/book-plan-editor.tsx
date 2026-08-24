@@ -49,10 +49,15 @@ export function BookPlanEditor({
   };
 
   const generate = (isRegenerate: boolean) => {
+    const hasWork = pages.some(
+      (p) => p.originalImage || p.approvalStatus === "approved",
+    );
     if (
       isRegenerate &&
       !window.confirm(
-        "Regenerate the whole plan?\n\nAll current concepts and prompts will be replaced with a fresh list. This cannot be undone.",
+        hasWork
+          ? "Start this book's plan again from scratch?\n\nALL pages will be replaced — including generated and approved images, which will be permanently deleted. This cannot be undone."
+          : "Regenerate the whole plan?\n\nAll current concepts and prompts will be replaced with a fresh list. This cannot be undone.",
       )
     ) {
       return;
@@ -62,7 +67,7 @@ export function BookPlanEditor({
       try {
         const fresh = await api<PageDto[]>(
           `/api/projects/${project.id}/plan/generate`,
-          { method: "POST" },
+          { method: "POST", body: JSON.stringify({ force: hasWork }) },
         );
         setPages(fresh);
         setStatus("planning");

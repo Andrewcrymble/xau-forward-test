@@ -200,18 +200,32 @@ export async function listPages(projectId: string): Promise<PageDto[]> {
  * Generate the full book plan. Refuses to overwrite a plan that already has
  * generated or approved artwork; otherwise replaces existing concepts.
  */
-export async function generatePlan(projectId: string): Promise<PageDto[]> {
+export async function generatePlan(
+  projectId: string,
+  opts?: { force?: boolean },
+): Promise<PageDto[]> {
   const project = await requireProject(projectId);
 
   const existing = await prisma.colouringPage.findMany({ where: { projectId } });
   const hasWork = existing.some(
     (p) => p.originalImage || p.approvalStatus === "approved",
   );
-  if (hasWork) {
+  if (hasWork && !opts?.force) {
     throw new PageServiceError(
-      "This project already has generated or approved pages. Delete those pages first if you really want a fresh plan.",
+      "This project already has generated or approved pages — confirm the full restart in the Plan tab to replace them.",
       409,
     );
+  }
+  if (hasWork) {
+    // Confirmed restart: free every stored page image straight away.
+    try {
+      const storage = getImageStorage();
+      for (const f of await storage.list(`projects/${projectId}/pages/`)) {
+        await storage.delete(f.url);
+      }
+    } catch {
+      // Leftovers are swept up by Settings → Free up storage.
+    }
   }
 
   const provider = getTextProvider();
