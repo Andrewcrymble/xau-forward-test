@@ -1,11 +1,20 @@
-import { ComingSoon } from "@/components/coming-soon";
+import { notFound } from "next/navigation";
+import { getProject } from "@/lib/services/project-service";
+import { getExportReadiness } from "@/lib/services/export-service";
+import { ExportScreen } from "@/components/export/export-screen";
 
-export default function ExportPage() {
-  return (
-    <ComingSoon
-      title="Export"
-      description="Download the complete KDP package: interior PDF, cover PDF, images and listing files."
-      phase={7}
-    />
-  );
+export const dynamic = "force-dynamic";
+
+export default async function ExportPage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
+  const { id } = await params;
+  const project = await getProject(id);
+  if (!project) notFound();
+
+  const readiness = await getExportReadiness(id);
+
+  return <ExportScreen project={project} readiness={readiness} />;
 }
