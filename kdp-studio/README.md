@@ -1,8 +1,8 @@
 # KDP Colouring Book Studio
 
-A web application for creating complete Amazon KDP-ready colouring books:
-book concept → page plan → AI image generation → review → print-ready
-interior PDF → wraparound cover → Amazon listing → export package.
+A complete publishing workflow for Amazon KDP colouring books:
+niche discovery → book concept → page planning → prompt generation →
+image generation → quality control → book assembly → KDP-ready output.
 
 **Status: Phases 1–7 complete — the full KDP workflow** — everything from Phase 1
 (navigation, database, project wizard, dashboard, autosaving setup), AI
@@ -22,6 +22,28 @@ be applied to the cover in one tap — all editable with autosave, and
 the complete KDP export: a readiness checklist and a one-ZIP package
 (interior PDF, cover PDF, numbered approved images, amazon-listing.txt,
 project-details.json).
+
+On top of the core workflow:
+
+- **Find Me a Niche** — turns broad topics into specific niche
+  opportunities via AI niche trees, with concept scores (always labelled
+  as AI analysis, never market data), GO DEEPER / COMBINE / SERIES
+  exploration, saved idea history with statuses, duplicate-vs-existing-book
+  warnings, and one-tap BUILD THIS BOOK into a prefilled project.
+- **Advanced book concept builder** — main niche / sub-niche / specific
+  angle, emotional tones, artwork themes, Bible verse settings (with
+  verification flags — scripture is never invented), and a persistent
+  creative brief + Book Style Profile injected into every image prompt.
+- **Colour by Numbers / mixed books** — flat-colour base artwork is
+  segmented programmatically (quantise → regions → merge → outline →
+  numbers at distance-transform interior points → colour key → exactly
+  matching completed reference), validated before approval. Numbers are
+  never left to the image AI.
+- **Book quality check** — whole-book review (duplicate concepts,
+  duplicate verses, failed image checks, CBN findings, repetitive motifs)
+  returning READY / ISSUES FOUND with exact page numbers, on the Export tab.
+- **Storage management** — palette-compressed print PNGs, automatic
+  pruning of superseded builds, and a Settings cleanup for orphaned files.
 
 **Hosting:** see [DEPLOY.md](./DEPLOY.md) — browser-only setup on Vercel +
 Neon Postgres, no terminal required.

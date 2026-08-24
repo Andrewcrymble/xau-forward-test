@@ -10,6 +10,7 @@ import type {
   ExportReadiness,
   PackageBuildResult,
 } from "@/lib/services/export-service";
+import type { QualityReport } from "@/lib/services/quality-service";
 import { Button, Card } from "@/components/ui";
 
 async function api<T>(url: string, init?: RequestInit): Promise<T> {
@@ -89,12 +90,89 @@ export function ExportScreen({
     }
   };
 
+  const [quality, setQuality] = useState<QualityReport | null>(null);
+  const [checking, setChecking] = useState(false);
+
+  const runQualityCheck = async () => {
+    setChecking(true);
+    setError(null);
+    try {
+      setQuality(
+        await api<QualityReport>(`/api/projects/${project.id}/quality`, {
+          method: "POST",
+        }),
+      );
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Quality check failed");
+    } finally {
+      setChecking(false);
+    }
+  };
+
   const r = readiness;
   const base = `/projects/${project.id}`;
   const download = result?.url ?? r.latestPackage?.url ?? null;
 
   return (
     <div className="space-y-5">
+      <Card className="space-y-3">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div>
+            <h2 className="text-base font-semibold text-stone-900">
+              Book quality check
+            </h2>
+            <p className="text-xs text-stone-500">
+              Whole-book review: duplicate or too-similar concepts, duplicate
+              verses, failed image checks, colour-by-numbers findings,
+              repetitive motifs and workflow gaps.
+            </p>
+          </div>
+          <Button onClick={runQualityCheck} disabled={checking}>
+            {checking ? "Checking…" : quality ? "Re-run quality check" : "Run quality check"}
+          </Button>
+        </div>
+        {quality && (
+          <div className="space-y-2">
+            <p
+              className={`rounded-lg px-3 py-2 text-sm font-semibold ${
+                quality.ready
+                  ? "bg-emerald-50 text-emerald-800"
+                  : "bg-red-50 text-red-700"
+              }`}
+            >
+              {quality.ready
+                ? `READY FOR BOOK ASSEMBLY — ${quality.approvedPages}/${quality.totalPages} pages approved${quality.issues.length > 0 ? `, ${quality.issues.length} advisory note(s) below` : ""}`
+                : "ISSUES FOUND — fix the errors below before assembling the book"}
+            </p>
+            <ul className="space-y-1.5">
+              {quality.issues.map((issue, i) => (
+                <li
+                  key={i}
+                  className={`rounded-lg border px-3 py-2 text-xs ${
+                    issue.severity === "error"
+                      ? "border-red-200 bg-red-50 text-red-700"
+                      : "border-amber-200 bg-amber-50 text-amber-800"
+                  }`}
+                >
+                  <span className="font-semibold uppercase">{issue.severity}</span>{" "}
+                  {issue.message}
+                  {issue.pageNumbers.length > 0 && (
+                    <span className="block text-[11px] opacity-80">
+                      Pages: {issue.pageNumbers.join(", ")}
+                    </span>
+                  )}
+                </li>
+              ))}
+              {quality.issues.length === 0 && (
+                <li className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs text-emerald-800">
+                  No issues found.
+                </li>
+              )}
+            </ul>
+          </div>
+        )}
+      </Card>
+
       <div className="grid gap-5 lg:grid-cols-2">
         <Card>
           <h2 className="mb-2 text-base font-semibold text-stone-900">
