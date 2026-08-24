@@ -36,6 +36,7 @@ import {
   TextArea,
   TextInput,
 } from "@/components/ui";
+import { ComplexityPreview, StylePreview } from "@/components/style-previews";
 
 type FormState = ProjectCreateInput;
 type FieldErrors = Partial<Record<string, string>>;
@@ -380,17 +381,37 @@ export function BookSetupForm({
       <h2 className="text-base font-semibold text-stone-900">
         Style & complexity
       </h2>
-      <Field label="Illustration style" error={errors.style}>
-        <Select
-          value={form.style}
-          onChange={(e) => update({ style: e.target.value })}
-        >
+      <Field
+        label="Illustration style"
+        hint="Previews are indicative sketches — your pages are generated in this style for your niche"
+        error={errors.style}
+      >
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
           {STYLES.map((s) => (
-            <option key={s.id} value={s.id}>
-              {s.label}
-            </option>
+            <button
+              key={s.id}
+              type="button"
+              onClick={() => update({ style: s.id })}
+              className={`overflow-hidden rounded-xl border-2 text-left transition-colors ${
+                form.style === s.id
+                  ? "border-stone-900 shadow-md"
+                  : "border-stone-200 hover:border-stone-400"
+              }`}
+              aria-pressed={form.style === s.id}
+            >
+              <div className="aspect-[3/4] w-full bg-white">
+                <StylePreview styleId={s.id} />
+              </div>
+              <span
+                className={`block px-2 py-1.5 text-center text-xs font-semibold ${
+                  form.style === s.id ? "bg-stone-900 text-white" : "bg-stone-50 text-stone-700"
+                }`}
+              >
+                {s.label}
+              </span>
+            </button>
           ))}
-        </Select>
+        </div>
       </Field>
       {form.style === "custom" && (
         <Field
@@ -410,19 +431,41 @@ export function BookSetupForm({
         hint="Automatically matched to your target audience — change it to override"
         error={errors.complexity}
       >
-        <Select
-          value={form.complexity}
-          onChange={(e) =>
-            update({ complexity: e.target.value, complexityOverridden: true })
-          }
-        >
-          {COMPLEXITY_LEVELS.map((c) => (
-            <option key={c.id} value={c.id}>
-              {c.label}
-              {c.id === recommendedComplexity ? " (recommended)" : ""}
-            </option>
+        <div className="grid grid-cols-5 gap-2">
+          {COMPLEXITY_LEVELS.map((c, i) => (
+            <button
+              key={c.id}
+              type="button"
+              onClick={() =>
+                update({ complexity: c.id, complexityOverridden: true })
+              }
+              className={`overflow-hidden rounded-xl border-2 transition-colors ${
+                form.complexity === c.id
+                  ? "border-stone-900 shadow-md"
+                  : "border-stone-200 hover:border-stone-400"
+              }`}
+              aria-pressed={form.complexity === c.id}
+            >
+              <div className="aspect-[3/4] w-full bg-white">
+                <ComplexityPreview level={i} />
+              </div>
+              <span
+                className={`block px-1 py-1 text-center text-[11px] font-semibold leading-tight ${
+                  form.complexity === c.id
+                    ? "bg-stone-900 text-white"
+                    : "bg-stone-50 text-stone-700"
+                }`}
+              >
+                {c.label}
+                {c.id === recommendedComplexity && (
+                  <span className="block text-[9px] font-normal opacity-80">
+                    recommended
+                  </span>
+                )}
+              </span>
+            </button>
           ))}
-        </Select>
+        </div>
       </Field>
       {form.complexityOverridden && recommendedComplexity && (
         <button
