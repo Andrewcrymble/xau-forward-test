@@ -116,6 +116,55 @@ export interface PageDto {
   notes: string | null;
 }
 
+/** Cover editor settings, stored as JSON on the Cover row. */
+export interface CoverSettings {
+  paperType: "blackWhiteWhitePaper" | "blackWhiteCreamPaper" | "colourWhitePaper";
+  titleFont: "serif" | "sans";
+  titleSize: number; // points
+  titlePosition: "top" | "middle" | "bottom";
+  textAlign: "left" | "center" | "right";
+  textColor: "white" | "black";
+  /** Spine + back cover background. */
+  backgroundColor: string; // hex
+  /** Keep Amazon's barcode area clear on the back cover (default ON). */
+  barcodeAreaClear: boolean;
+  /** All generated artwork URLs (the Cover.artwork field is the selected one). */
+  artworkVersions: string[];
+}
+
+export const DEFAULT_COVER_SETTINGS: CoverSettings = {
+  paperType: "blackWhiteWhitePaper",
+  titleFont: "serif",
+  titleSize: 42,
+  titlePosition: "top",
+  textAlign: "center",
+  textColor: "white",
+  backgroundColor: "#2f5d8a",
+  barcodeAreaClear: true,
+  artworkVersions: [],
+};
+
+/** Cover state as exposed to the UI. */
+export interface CoverDto {
+  title: string;
+  subtitle: string | null;
+  author: string | null;
+  spineText: string | null;
+  backCoverText: string | null;
+  artwork: string | null;
+  settings: CoverSettings;
+  dims: {
+    pageCount: number;
+    spineIn: number;
+    totalWidthIn: number;
+    totalHeightIn: number;
+    bleedIn: number;
+    trimWidthIn: number;
+    trimHeightIn: number;
+    spineTextAllowed: boolean;
+  };
+}
+
 /** Standard typed API envelope used by every API route. */
 export type ApiResponse<T> =
   | { ok: true; data: T }

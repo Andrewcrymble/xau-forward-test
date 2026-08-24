@@ -54,6 +54,9 @@ export interface ImageGenerationRequest {
   prompt: string;
   /** Seed hint for deterministic placeholder providers (page number). */
   seed?: number;
+  /** Placeholder providers render differently per variant; real providers
+   *  rely on the prompt alone. */
+  variant?: "line-art" | "cover";
 }
 
 export interface GeneratedImage {

@@ -5,6 +5,7 @@ const nextConfig: NextConfig = {
   // serverless output tracing ships them with the API routes.
   outputFileTracingIncludes: {
     "/api/projects/[id]/interior/build": ["./src/assets/fonts/**"],
+    "/api/projects/[id]/cover/build": ["./src/assets/fonts/**"],
   },
 };
 

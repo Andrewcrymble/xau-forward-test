@@ -57,13 +57,43 @@ function placeholderSvg(seed: number): string {
 </svg>`;
 }
 
+function coverPlaceholderSvg(seed: number): string {
+  const rand = mulberry32(seed * 104729 + 7);
+  const hues = [Math.floor(rand() * 360), Math.floor(rand() * 360)];
+  const blobs: string[] = [];
+  for (let i = 0; i < 10; i++) {
+    const cx = rand() * W;
+    const cy = rand() * H;
+    const r = 90 + rand() * 200;
+    const hue = Math.floor(rand() * 360);
+    blobs.push(
+      `<circle cx="${cx.toFixed(0)}" cy="${cy.toFixed(0)}" r="${r.toFixed(0)}" fill="hsl(${hue} 70% 60%)" opacity="0.55"/>`,
+    );
+  }
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="hsl(${hues[0]} 65% 55%)"/>
+      <stop offset="1" stop-color="hsl(${hues[1]} 70% 40%)"/>
+    </linearGradient>
+  </defs>
+  <rect width="${W}" height="${H}" fill="url(#g)"/>
+  ${blobs.join("\n  ")}
+  <text x="${W / 2}" y="${H / 2}" font-family="Arial, sans-serif" font-size="40" font-weight="bold" fill="white" text-anchor="middle" opacity="0.85">SAMPLE COVER ART</text>
+  <text x="${W / 2}" y="${H / 2 + 54}" font-family="Arial, sans-serif" font-size="24" fill="white" text-anchor="middle" opacity="0.75">Add an image API key for real artwork</text>
+</svg>`;
+}
+
 export class MockImageProvider implements ImageAIProvider {
   readonly name = "mock";
 
   async generateImage(req: ImageGenerationRequest): Promise<GeneratedImage> {
     // Small artificial delay so queue behaviour (concurrency, pause) is visible.
     await new Promise((r) => setTimeout(r, 400 + Math.random() * 600));
-    const svg = placeholderSvg(req.seed ?? 1);
+    const svg =
+      req.variant === "cover"
+        ? coverPlaceholderSvg(req.seed ?? 1)
+        : placeholderSvg(req.seed ?? 1);
     const data = await sharp(Buffer.from(svg)).png().toBuffer();
     return {
       data,

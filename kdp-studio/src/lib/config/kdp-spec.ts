@@ -61,6 +61,20 @@ export const DEFAULT_INTERIOR_MARGIN_ID = "colouringBookNoBleed";
 /** KDP cover bleed (applied on all four outer edges of the wraparound). */
 export const COVER_BLEED_IN = 0.125;
 
+/** Keep text/important cover elements this far inside the trim edge. */
+export const COVER_SAFE_MARGIN_IN = 0.25;
+
+/** Amazon places its barcode on the back cover; keep this area clear. */
+export const BARCODE_AREA = {
+  widthIn: 2,
+  heightIn: 1.2,
+  /** Inset from the back cover's bottom-right trim corner. */
+  insetIn: 0.25,
+} as const;
+
+/** Minimum spine width before KDP allows printed spine text. */
+export const MIN_SPINE_TEXT_WIDTH_IN = 0.25;
+
 // ---------------------------------------------------------------------------
 // Spine width — per-page rates differ by paper/ink type. Source: KDP
 // paperback cover specifications. Centrally maintained; update here only.
