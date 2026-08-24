@@ -1,5 +1,5 @@
 import sharp from "sharp";
-import { INTERIOR_IMAGE } from "@/lib/config/kdp-spec";
+import { INTERIOR_IMAGE } from "./kdp-spec";
 
 // Colour-by-numbers processing pipeline. The image AI only supplies a
 // flat-colour illustration; everything numbers-related is PROGRAMMATIC:

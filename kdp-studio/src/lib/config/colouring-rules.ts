@@ -104,6 +104,7 @@ export function buildCbnArtworkPrompt(ctx: CbnPromptContext): string {
       `- Use exactly ${ctx.colourCount} distinct flat colours${ctx.paletteDescription ? ` from this palette: ${ctx.paletteDescription}` : ""}.`,
       `- ${ctx.difficultyInstruction}.`,
       "- Every shape is a clean enclosed area with crisp edges; no ambiguous boundaries.",
+      "- Favour LARGE, generous shapes: every area must be big enough to colour in comfortably with a pencil — no fiddly small patches.",
       "- NO gradients, NO shading, NO texture, NO outlines drawn around shapes, NO tiny slivers.",
       "- NO numbers, NO letters, NO text, NO labels anywhere — numbering is added separately.",
       "- Plain white background around the illustration; generous white margin on all edges.",

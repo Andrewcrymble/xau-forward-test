@@ -84,11 +84,11 @@ export const VERSE_THEMES: OptionDef[] = [
 
 /** Colour-by-numbers difficulty — directly controls region size/count. */
 export const CBN_DIFFICULTIES: OptionDef[] = [
-  { id: "very_easy", label: "Very easy — ages 4–6", promptText: "very large simple enclosed shapes, around 10–20 big regions" },
-  { id: "easy", label: "Easy — ages 6–8", promptText: "large clear enclosed shapes, around 20–35 regions" },
-  { id: "medium", label: "Medium — ages 8–12", promptText: "medium-sized enclosed regions, around 35–60 regions" },
-  { id: "adult", label: "Adult", promptText: "smaller detailed regions, around 60–100 regions, all still practical to colour" },
-  { id: "detailed_adult", label: "Detailed adult", promptText: "fine detailed regions, around 100–160 regions, none impractically small" },
+  { id: "very_easy", label: "Very easy — ages 4–6", promptText: "very large simple enclosed shapes, around 8–16 big regions" },
+  { id: "easy", label: "Easy — ages 6–8", promptText: "large clear enclosed shapes, around 15–28 regions" },
+  { id: "medium", label: "Medium — ages 8–12", promptText: "generously sized enclosed regions, around 25–45 regions" },
+  { id: "adult", label: "Adult", promptText: "smaller detailed regions, around 45–80 regions, all still practical to colour" },
+  { id: "detailed_adult", label: "Detailed adult", promptText: "fine detailed regions, around 80–130 regions, none impractically small" },
 ];
 
 export const CBN_COLOUR_COUNTS = [4, 5, 6, 8, 10, 12];
