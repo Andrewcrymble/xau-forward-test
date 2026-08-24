@@ -398,6 +398,51 @@ export async function buildCoverPdf(input: CoverPdfInput): Promise<{
       page, lines, display, backSize, areaX, areaW, topY, "center", textColour,
     );
   }
+  // --- ColourJoy brand badge: small white rounded plate, front + back ----
+  // Front: bottom corner opposite any bottom-anchored text; back: bottom
+  // left, well clear of the barcode zone (bottom right). Branding must
+  // never block a build, so any failure here is swallowed.
+  try {
+    const logoBytes = await readFile(
+      path.join(process.cwd(), "src", "assets", "branding", "colourjoy-logo.png"),
+    );
+    const LOGO_W_IN = 0.85;
+    const badgeW = LOGO_W_IN * PT;
+    const pxW = Math.round(LOGO_W_IN * PRINT_DPI);
+    const pad = Math.round(pxW * 0.06);
+    const inner = await sharp(logoBytes).resize(pxW - 2 * pad).png().toBuffer();
+    const innerMeta = await sharp(inner).metadata();
+    const pxH = (innerMeta.height ?? Math.round((pxW - 2 * pad) * (2 / 3))) + 2 * pad;
+    const radius = Math.round(pxW * 0.07);
+    const badgePng = await sharp({
+      create: { width: pxW, height: pxH, channels: 4, background: "#ffffff" },
+    })
+      .composite([
+        { input: inner, left: pad, top: pad },
+        {
+          input: Buffer.from(
+            `<svg width="${pxW}" height="${pxH}"><rect width="${pxW}" height="${pxH}" rx="${radius}" ry="${radius}"/></svg>`,
+          ),
+          blend: "dest-in",
+        },
+      ])
+      .png()
+      .toBuffer();
+    const badge = await doc.embedPng(badgePng);
+    const badgeH = badgeW * (pxH / pxW);
+    const badgeY = bleed + safe;
+    const bottomAlign =
+      input.settings.titlePosition === "bottom" || input.author
+        ? input.settings.textAlign
+        : "center";
+    const frontLogoX =
+      bottomAlign === "right" ? frontSafeX : frontX + panelW - safe - badgeW;
+    page.drawImage(badge, { x: frontLogoX, y: badgeY, width: badgeW, height: badgeH });
+    page.drawImage(badge, { x: backSafeX, y: badgeY, width: badgeW, height: badgeH });
+  } catch (err) {
+    console.warn("cover brand badge skipped:", err);
+  }
+
   if (input.settings.barcodeAreaClear) {
     // White rectangle where Amazon prints its barcode — kept clear, no fake
     // ISBN is ever drawn.

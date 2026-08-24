@@ -318,6 +318,32 @@ export function CoverPreview({
         </div>
       )}
 
+      {/* ColourJoy brand badge — front bottom corner (opposite any
+          bottom-anchored text) and back bottom-left, matching the PDF */}
+      {(() => {
+        const logoWIn = 0.85;
+        const badgePx = logoWIn * 72 * scale;
+        const bottomAlign =
+          settings.titlePosition === "bottom" || cover.author ? align : "center";
+        const frontLogoX =
+          bottomAlign === "right" ? frontX + safe : frontX + panelW - safe - logoWIn;
+        return [frontLogoX, backX + safe].map((x, i) => (
+          <img
+            key={i}
+            src="/branding/colourjoy-logo.png"
+            alt="ColourJoy Colouring Books logo"
+            className="absolute bg-white"
+            style={{
+              left: pct(x),
+              bottom: vpct(dims.bleedIn + safe),
+              width: pct(logoWIn),
+              padding: badgePx * 0.06,
+              borderRadius: badgePx * 0.07,
+            }}
+          />
+        ));
+      })()}
+
       {/* Barcode clear area */}
       {settings.barcodeAreaClear && (
         <div
