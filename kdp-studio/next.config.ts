@@ -6,6 +6,8 @@ const nextConfig: NextConfig = {
   outputFileTracingIncludes: {
     "/api/projects/[id]/interior/build": ["./src/assets/fonts/**"],
     "/api/projects/[id]/cover/build": ["./src/assets/fonts/**"],
+    // The package builder can build both PDFs itself when none exist yet.
+    "/api/projects/[id]/export/package": ["./src/assets/fonts/**"],
   },
 };
 

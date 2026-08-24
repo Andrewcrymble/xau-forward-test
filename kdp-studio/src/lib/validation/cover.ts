@@ -1,11 +1,13 @@
 import { z } from "zod";
+import { COVER_FONT_IDS } from "@/lib/config/cover-fonts";
 
 const hexColour = z.string().regex(/^#[0-9a-fA-F]{6}$/);
 
 export const coverSettingsSchema = z.object({
   paperType: z.enum(["blackWhiteWhitePaper", "blackWhiteCreamPaper", "colourWhitePaper"]),
-  titleFont: z.enum(["serif", "sans"]),
+  titleFont: z.enum(COVER_FONT_IDS),
   titleSize: z.number().min(18).max(96),
+  titleCase: z.enum(["normal", "uppercase"]),
   titlePosition: z.enum(["top", "middle", "bottom"]),
   textAlign: z.enum(["left", "center", "right"]),
   textColor: hexColour,

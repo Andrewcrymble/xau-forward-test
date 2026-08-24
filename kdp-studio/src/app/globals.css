@@ -9,3 +9,31 @@ body {
   background: var(--background);
   color: var(--foreground);
 }
+
+/* Cover title display fonts — same TTFs the exported PDF embeds
+   (src/lib/config/cover-fonts.ts), served from /fonts for the preview. */
+@font-face {
+  font-family: "Chewy";
+  src: url("/fonts/Chewy-Regular.ttf") format("truetype");
+  font-display: swap;
+}
+@font-face {
+  font-family: "Luckiest Guy";
+  src: url("/fonts/LuckiestGuy-Regular.ttf") format("truetype");
+  font-display: swap;
+}
+@font-face {
+  font-family: "Pacifico";
+  src: url("/fonts/Pacifico-Regular.ttf") format("truetype");
+  font-display: swap;
+}
+@font-face {
+  font-family: "Abril Fatface";
+  src: url("/fonts/AbrilFatface-Regular.ttf") format("truetype");
+  font-display: swap;
+}
+@font-face {
+  font-family: "Alfa Slab One";
+  src: url("/fonts/AlfaSlabOne-Regular.ttf") format("truetype");
+  font-display: swap;
+}

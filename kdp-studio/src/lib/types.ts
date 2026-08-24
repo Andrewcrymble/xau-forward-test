@@ -119,8 +119,11 @@ export interface PageDto {
 /** Cover editor settings, stored as JSON on the Cover row. */
 export interface CoverSettings {
   paperType: "blackWhiteWhitePaper" | "blackWhiteCreamPaper" | "colourWhitePaper";
-  titleFont: "serif" | "sans";
+  /** One of the COVER_FONTS registry ids (config/cover-fonts.ts). */
+  titleFont: string;
   titleSize: number; // points
+  /** Render the title in capitals. */
+  titleCase: "normal" | "uppercase";
   titlePosition: "top" | "middle" | "bottom";
   textAlign: "left" | "center" | "right";
   /** Front-cover text colour (hex; legacy "white"/"black" values are migrated). */
@@ -149,6 +152,7 @@ export const DEFAULT_COVER_SETTINGS: CoverSettings = {
   paperType: "blackWhiteWhitePaper",
   titleFont: "serif",
   titleSize: 42,
+  titleCase: "normal",
   titlePosition: "top",
   textAlign: "center",
   textColor: "#ffffff",

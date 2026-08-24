@@ -13,6 +13,7 @@ import {
   calculateCoverDimensions,
   type PaperType,
 } from "@/lib/config/kdp-spec";
+import { coverFont } from "@/lib/config/cover-fonts";
 import type { CoverSettings } from "@/lib/types";
 
 // Full wraparound KDP cover: [bleed | back | spine | front | bleed], one
@@ -169,9 +170,9 @@ export async function buildCoverPdf(input: CoverPdfInput): Promise<{
   const doc = await PDFDocument.create();
   doc.registerFontkit(fontkit);
   const fontDir = path.join(process.cwd(), "src", "assets", "fonts");
-  const family = input.settings.titleFont === "sans" ? "LiberationSans" : "LiberationSerif";
-  const displayBold = await doc.embedFont(await readFile(path.join(fontDir, `${family}-Bold.ttf`)));
-  const display = await doc.embedFont(await readFile(path.join(fontDir, `${family}-Regular.ttf`)));
+  const fontDef = coverFont(input.settings.titleFont);
+  const displayBold = await doc.embedFont(await readFile(path.join(fontDir, fontDef.titleFile)));
+  const display = await doc.embedFont(await readFile(path.join(fontDir, fontDef.bodyFile)));
 
   doc.setTitle(`${input.title} — cover`);
   doc.setProducer("KDP Colouring Book Studio");
@@ -225,7 +226,9 @@ export async function buildCoverPdf(input: CoverPdfInput): Promise<{
   const frontSafeX = frontX + safe;
   const frontSafeW = panelW - 2 * safe;
   const titleSize = input.settings.titleSize;
-  const titleLines = wrapText(input.title, displayBold, titleSize, frontSafeW);
+  const titleText =
+    input.settings.titleCase === "uppercase" ? input.title.toUpperCase() : input.title;
+  const titleLines = wrapText(titleText, displayBold, titleSize, frontSafeW);
   const subtitleSize = Math.max(14, Math.round(titleSize * 0.42));
   const subtitleLines = input.subtitle
     ? wrapText(input.subtitle, display, subtitleSize, frontSafeW)

@@ -11,6 +11,7 @@ import type { ApiResponse, CoverDto, CoverSettings, ProjectDto } from "@/lib/typ
 import type { CoverBuildResult } from "@/lib/services/cover-service";
 import { Button, Card, Checkbox, Field, Select, TextArea, TextInput } from "@/components/ui";
 import { CoverPreview } from "@/components/cover/cover-preview";
+import { COVER_FONTS } from "@/lib/config/cover-fonts";
 
 async function api<T>(url: string, init?: RequestInit): Promise<T> {
   const res = await fetch(url, {
@@ -224,9 +225,10 @@ export function CoverScreen({
             <h2 className="text-base font-semibold text-stone-900">Typography & style</h2>
             <div className="grid grid-cols-2 gap-3">
               <Field label="Title font">
-                <Select value={settings.titleFont} onChange={(e) => patch({}, { titleFont: e.target.value as CoverSettings["titleFont"] })}>
-                  <option value="serif">Serif</option>
-                  <option value="sans">Sans-serif</option>
+                <Select value={settings.titleFont} onChange={(e) => patch({}, { titleFont: e.target.value })}>
+                  {COVER_FONTS.map((f) => (
+                    <option key={f.id} value={f.id}>{f.label}</option>
+                  ))}
                 </Select>
               </Field>
               <Field label="Title size">
@@ -234,6 +236,12 @@ export function CoverScreen({
                   {[28, 34, 42, 50, 60, 72].map((s) => (
                     <option key={s} value={s}>{s} pt</option>
                   ))}
+                </Select>
+              </Field>
+              <Field label="Title case">
+                <Select value={settings.titleCase} onChange={(e) => patch({}, { titleCase: e.target.value as CoverSettings["titleCase"] })}>
+                  <option value="normal">As typed</option>
+                  <option value="uppercase">UPPERCASE</option>
                 </Select>
               </Field>
               <Field label="Title position">

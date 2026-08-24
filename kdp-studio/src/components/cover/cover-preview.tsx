@@ -9,6 +9,7 @@
 import { useEffect, useRef, useState, type CSSProperties } from "react";
 import type { CoverDto, CoverSettings } from "@/lib/types";
 import { BARCODE_AREA, COVER_SAFE_MARGIN_IN } from "@/lib/config/kdp-spec";
+import { coverFont } from "@/lib/config/cover-fonts";
 
 function hexToRgba(hex: string, alpha: number): string {
   const n = parseInt((/^#[0-9a-fA-F]{6}$/.test(hex) ? hex : "#000000").slice(1), 16);
@@ -74,6 +75,7 @@ export function CoverPreview({
   const textColor = /^#/.test(settings.textColor)
     ? settings.textColor
     : settings.textColor === "black" ? "#111111" : "#ffffff";
+  const font = coverFont(settings.titleFont);
   const plate = settings.textEffect === "plate";
   const plateBg = plate ? hexToRgba(settings.effectColor, 0.72) : undefined;
   const align = settings.textAlign;
@@ -190,7 +192,8 @@ export function CoverPreview({
               fontSize: settings.titleSize * scale,
               lineHeight: 1.2,
               fontWeight: 700,
-              fontFamily: settings.titleFont === "sans" ? "Arial, sans-serif" : "Georgia, serif",
+              fontFamily: font.cssTitle,
+              textTransform: settings.titleCase === "uppercase" ? "uppercase" : undefined,
               ...effectCss(settings.textEffect, settings.effectColor, settings.titleSize * scale),
             }}
           >
@@ -201,7 +204,7 @@ export function CoverPreview({
               style={{
                 fontSize: Math.max(14, settings.titleSize * 0.42) * scale,
                 marginTop: 6 * scale,
-                fontFamily: settings.titleFont === "sans" ? "Arial, sans-serif" : "Georgia, serif",
+                fontFamily: font.cssBody,
                 ...effectCss(
                   settings.textEffect,
                   settings.effectColor,
@@ -226,7 +229,7 @@ export function CoverPreview({
             textAlign: align,
             color: textColor,
             fontSize: Math.max(13, settings.titleSize * 0.38) * scale,
-            fontFamily: settings.titleFont === "sans" ? "Arial, sans-serif" : "Georgia, serif",
+            fontFamily: font.cssBody,
             ...effectCss(
               settings.textEffect,
               settings.effectColor,
@@ -262,6 +265,7 @@ export function CoverPreview({
               color: textColor,
               fontSize: Math.min(16, dims.spineIn * 72 * 0.55) * scale,
               transform: "rotate(90deg)",
+              fontFamily: font.cssTitle,
             }}
           >
             {cover.spineText}
