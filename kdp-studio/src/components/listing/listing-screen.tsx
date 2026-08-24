@@ -215,6 +215,37 @@ export function ListingScreen({
           </Card>
 
           <Card className="space-y-3">
+            <h2 className="text-base font-semibold text-stone-900">Suggested categories</h2>
+            <p className="text-xs text-stone-500">
+              KDP lets you choose up to 3 browse categories: aim for one big
+              category plus two small niche ones. These are AI suggestions —
+              in KDP&apos;s category picker, choose the closest match (names
+              may differ slightly). Not verified market data.
+            </p>
+            {listing.categories.length > 0 ? (
+              <div className="grid grid-cols-1 gap-2">
+                {listing.categories.map((c, i) => (
+                  <TextInput
+                    key={i}
+                    value={c}
+                    aria-label={`Category ${i + 1}`}
+                    onChange={(e) => {
+                      const categories = [...listing.categories];
+                      categories[i] = e.target.value;
+                      patch({ categories });
+                    }}
+                  />
+                ))}
+              </div>
+            ) : (
+              <p className="text-sm text-stone-500">
+                No category suggestions yet — regenerate the listing to get
+                three recommendations.
+              </p>
+            )}
+          </Card>
+
+          <Card className="space-y-3">
             <h2 className="text-base font-semibold text-stone-900">Audience & promo</h2>
             <Field label="Audience description">
               <TextArea rows={2} value={listing.audience} onChange={(e) => patch({ audience: e.target.value })} />

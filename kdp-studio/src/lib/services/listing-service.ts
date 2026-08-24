@@ -11,7 +11,10 @@ import type { ListingUpdateBody } from "@/lib/validation/listing";
 function parseListing(json: string | null): ListingContent | null {
   if (!json) return null;
   try {
-    return JSON.parse(json) as ListingContent;
+    const parsed = JSON.parse(json) as ListingContent;
+    // Listings saved before category suggestions shipped lack the field.
+    parsed.categories ??= [];
+    return parsed;
   } catch {
     return null;
   }

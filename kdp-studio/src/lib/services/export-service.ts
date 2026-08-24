@@ -51,6 +51,13 @@ function listingToText(listing: ListingContent): string {
     "KEYWORDS (7 backend slots):",
     ...listing.keywords.map((k, i) => `${i + 1}. ${k}`),
     "",
+    "SUGGESTED CATEGORIES (choose up to 3 in KDP):",
+    ...(listing.categories?.length
+      ? listing.categories.map((c) => `- ${c}`)
+      : ["- (regenerate the listing to get category suggestions)"]),
+    "  Note: AI suggestions — pick the closest match in KDP's category",
+    "  picker; category names in the picker may differ slightly.",
+    "",
     "AUDIENCE:",
     listing.audience,
     "",

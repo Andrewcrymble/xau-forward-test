@@ -278,6 +278,9 @@ export interface ListingContent {
   bulletPoints: string[];
   /** Exactly seven backend search keywords. */
   keywords: string[];
+  /** Three suggested KDP browse category paths (one broad + two niche).
+   *  AI suggestions — pick the closest match in KDP's category picker. */
+  categories: string[];
   audience: string;
   backCoverDescription: string;
   shortPromo: string;

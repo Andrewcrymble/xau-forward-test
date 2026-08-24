@@ -7,6 +7,10 @@ export const listingContentSchema = z.object({
   description: z.string().trim().max(4000, "Amazon descriptions are limited to 4000 characters"),
   bulletPoints: z.array(z.string().trim().max(500)).max(10),
   keywords: z.array(z.string().trim().max(80)).length(7, "Amazon allows exactly 7 keyword slots"),
+  categories: z
+    .array(z.string().trim().max(200))
+    .max(3, "KDP allows up to 3 categories")
+    .default([]),
   audience: z.string().trim().max(1000),
   backCoverDescription: z.string().trim().max(2000),
   shortPromo: z.string().trim().max(500),

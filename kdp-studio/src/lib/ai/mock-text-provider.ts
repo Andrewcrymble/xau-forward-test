@@ -116,6 +116,11 @@ export class MockTextProvider implements TextAIProvider {
         "single sided colouring",
         "large print colouring",
       ],
+      categories: [
+        "Juvenile Nonfiction > Activity Books > Coloring Books",
+        `Juvenile Nonfiction > ${n} (sample category)`,
+        "Crafts & Hobbies > Coloring Books for Grown-Ups",
+      ],
       audience: `Perfect for ${req.audience} who love ${n.toLowerCase()}.`,
       backCoverDescription:
         `${req.pageCount} beautiful ${n.toLowerCase()} colouring pages, printed single-sided for every kind of pen and pencil. Sample text — generate real copy with an AI key.`,

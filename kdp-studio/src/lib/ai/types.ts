@@ -81,6 +81,8 @@ export interface ListingDraft {
   description: string;
   bulletPoints: string[];
   keywords: string[];
+  /** Three suggested KDP browse category paths (broad → specific). */
+  categories: string[];
   audience: string;
   backCoverDescription: string;
   shortPromo: string;

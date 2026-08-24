@@ -233,6 +233,7 @@ export class OpenAITextProvider implements TextAIProvider {
       "You are an expert Amazon KDP listing copywriter for colouring books.",
       "Write compelling, honest sales copy. Never promise Amazon rankings, bestseller status or sales results.",
       "Keywords are backend search terms: 2-3 words each, no punctuation, no duplicates of the title words where avoidable, exactly 7 of them.",
+      "Categories: suggest exactly 3 real Amazon browse category paths for this book, formatted as breadcrumbs with ' > ' separators (e.g. 'Juvenile Nonfiction > Activity Books > Coloring Books'). Pick ONE broad high-traffic category plus TWO small niche categories the book could realistically rank in. Use categories you are confident exist on Amazon; the publisher will pick the closest match in KDP's category picker.",
       "The Amazon title must be under 200 characters; the description 600-1500 characters, written as flowing paragraphs (plain text, no markdown).",
       "The back-cover description is 2-4 short sentences suitable for print.",
       "The short promo is a single sentence for ads/social.",
@@ -249,7 +250,7 @@ export class OpenAITextProvider implements TextAIProvider {
       req.pageTitles.length > 0
         ? `Example pages: ${req.pageTitles.slice(0, 15).join("; ")}`
         : "",
-      "Produce: 4 title suggestions, a recommended title and subtitle, the product description, 4-6 bullet-style sales points, exactly 7 keywords, a one-sentence audience description, a back-cover description, and a short promotional sentence.",
+      "Produce: 4 title suggestions, a recommended title and subtitle, the product description, 4-6 bullet-style sales points, exactly 7 keywords, exactly 3 suggested browse categories, a one-sentence audience description, a back-cover description, and a short promotional sentence.",
     ]
       .filter(Boolean)
       .join("\n");
@@ -267,13 +268,19 @@ export class OpenAITextProvider implements TextAIProvider {
           description: { type: "string" },
           bulletPoints: { type: "array", items: { type: "string" } },
           keywords: { type: "array", items: { type: "string" } },
+          categories: {
+            type: "array",
+            items: { type: "string" },
+            description:
+              "Exactly 3 Amazon browse category paths, ' > ' separated, one broad + two niche",
+          },
           audience: { type: "string" },
           backCoverDescription: { type: "string" },
           shortPromo: { type: "string" },
         },
         required: [
-          "titleSuggestions", "title", "subtitle", "description",
-          "bulletPoints", "keywords", "audience", "backCoverDescription", "shortPromo",
+          "titleSuggestions", "title", "subtitle", "description", "bulletPoints",
+          "keywords", "categories", "audience", "backCoverDescription", "shortPromo",
         ],
       },
     };
@@ -309,6 +316,7 @@ export class OpenAITextProvider implements TextAIProvider {
     while (listing.keywords.length < 7) {
       listing.keywords.push(`${listing.keywords.length + 1} colouring book`);
     }
+    listing.categories = (listing.categories ?? []).filter(Boolean).slice(0, 3);
     return {
       listing,
       usage: {
