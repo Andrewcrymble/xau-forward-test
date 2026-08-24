@@ -1,3 +1,4 @@
+import sharp from "sharp";
 import { prisma } from "@/lib/db";
 import { getImageProvider } from "@/lib/ai";
 import { getImageStorage } from "@/lib/storage";
@@ -23,6 +24,10 @@ function pageToDto(p: {
   pageNumber: number;
   title: string;
   concept: string;
+  pageType: string;
+  pageText: string | null;
+  cbnData: string | null;
+  completedReference: string | null;
   prompt: string;
   promptEdited: boolean;
   originalImage: string | null;
@@ -34,11 +39,23 @@ function pageToDto(p: {
   generationAttempts: number;
   notes: string | null;
 }): PageDto {
+  let cbnData = null;
+  if (p.cbnData) {
+    try {
+      cbnData = JSON.parse(p.cbnData);
+    } catch {
+      cbnData = null;
+    }
+  }
   return {
     id: p.id,
     pageNumber: p.pageNumber,
     title: p.title,
     concept: p.concept,
+    pageType: (p.pageType as PageDto["pageType"]) ?? "standard",
+    pageText: p.pageText,
+    cbnData,
+    completedReference: p.completedReference,
     prompt: p.prompt,
     promptEdited: p.promptEdited,
     originalImage: p.originalImage,
@@ -93,10 +110,20 @@ export async function generatePageImage(pageId: string): Promise<PageDto> {
       (await prisma.imageVersion.count({ where: { pageId } })) + 1;
     const keyBase = `projects/${page.projectId}/pages/${page.id}/v${versionNumber}`;
 
+    // Re-encode the original as palette PNG — visually lossless for line
+    // art and far smaller, which matters on storage quotas.
+    let originalBytes = image.data;
+    try {
+      originalBytes = await sharp(image.data)
+        .png({ compressionLevel: 9, palette: true })
+        .toBuffer();
+    } catch {
+      originalBytes = image.data;
+    }
     const originalUrl = await storage.put(
       `${keyBase}-original.png`,
-      image.data,
-      image.contentType,
+      originalBytes,
+      "image/png",
     );
 
     const result = await normaliseToPrintCanvas(image.data);

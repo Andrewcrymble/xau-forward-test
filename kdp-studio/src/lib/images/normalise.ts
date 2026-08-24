@@ -125,7 +125,9 @@ export async function normaliseToPrintCanvas(input: Buffer): Promise<NormaliseRe
       },
     })
       .composite([{ input: fitted, gravity: "centre" }])
-      .png()
+      // Palette PNG at max compression: visually lossless for black-and-white
+      // line art and typically 60-80% smaller — critical for storage quotas.
+      .png({ compressionLevel: 9, palette: true })
       .toBuffer();
   } catch {
     return {

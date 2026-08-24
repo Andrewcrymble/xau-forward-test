@@ -30,6 +30,8 @@ export const COLOURING_PAGE_MASTER_RULES = [
   "Match line complexity to the target age/audience.",
 ] as const;
 
+import type { BookStyleProfile } from "@/lib/types";
+
 export interface PagePromptContext {
   /** Project style instruction (resolved preset text or custom style). */
   styleInstruction: string;
@@ -37,14 +39,46 @@ export interface PagePromptContext {
   audienceDescription: string;
   /** The individual page concept description. */
   pageConcept: string;
+  /** Comma-separated emotional tones for the whole book. */
+  tones?: string | null;
+  /** Recurring imagery direction for the whole book. */
+  artworkTheme?: string | null;
+  /** Creative brief from the Book Concept builder. */
+  creativeBrief?: string | null;
+  /** Persistent Book Style Profile — included so every page matches. */
+  styleProfile?: BookStyleProfile | null;
+  /** Text intentionally part of the artwork (e.g. a Bible verse + reference). */
+  pageText?: string | null;
   /** Short titles/summaries of previously planned pages, for de-duplication. */
   previousPageSummaries?: string[];
 }
 
+function styleProfileSection(p: BookStyleProfile): string {
+  return [
+    "BOOK STYLE PROFILE — every page of this book must follow this exact art direction so all pages look like the same professionally illustrated book:",
+    `- Line thickness: ${p.lineThickness}`,
+    `- Level of detail: ${p.levelOfDetail}`,
+    `- Decorative style: ${p.decorativeStyle}`,
+    `- Characters: ${p.characterStyle}`,
+    `- Botanical elements: ${p.botanicalStyle}`,
+    `- Landscapes: ${p.landscapeStyle}`,
+    `- Architecture: ${p.architecturalStyle}`,
+    `- Borders/framing: ${p.framingStyle}`,
+    `- White space: ${p.whiteSpace}`,
+    `- Overall aesthetic: ${p.overallAesthetic}`,
+    p.recurringMotifs.length > 0
+      ? `- Recurring motifs to draw from: ${p.recurringMotifs.join(", ")}`
+      : "",
+  ]
+    .filter(Boolean)
+    .join("\n");
+}
+
 /**
  * Composes a complete image-generation prompt for one colouring page:
- * master rules + project style + audience + page concept + duplicate
- * avoidance. Every image provider must be fed prompts built here.
+ * master rules + project style + book style profile + audience + page
+ * concept + duplicate avoidance. Every image provider must be fed prompts
+ * built here.
  */
 export function buildColouringPagePrompt(ctx: PagePromptContext): string {
   const sections: string[] = [
@@ -52,6 +86,26 @@ export function buildColouringPagePrompt(ctx: PagePromptContext): string {
     `Illustration style: ${ctx.styleInstruction}`,
     `Target audience: ${ctx.audienceDescription}. Match the complexity of the line work to this audience.`,
   ];
+
+  if (ctx.tones?.trim()) {
+    sections.push(`Emotional tone of the book: ${ctx.tones.trim()}. The page should communicate this feeling.`);
+  }
+  if (ctx.artworkTheme?.trim()) {
+    sections.push(`The book's recurring imagery includes: ${ctx.artworkTheme.trim()}.`);
+  }
+  if (ctx.creativeBrief?.trim()) {
+    sections.push(`CREATIVE BRIEF for the whole book:\n${ctx.creativeBrief.trim()}`);
+  }
+  if (ctx.styleProfile) {
+    sections.push(styleProfileSection(ctx.styleProfile));
+  }
+  if (ctx.pageText?.trim()) {
+    sections.push(
+      "INTENTIONAL TEXT: this page intentionally includes the following text as part of the artwork: " +
+        `"${ctx.pageText.trim()}". Render this text EXACTLY as given, in elegant hand-lettered outline style suitable for colouring, well inside the safe margins. ` +
+        "Apart from this exact text, add no other words.",
+    );
+  }
 
   if (ctx.previousPageSummaries && ctx.previousPageSummaries.length > 0) {
     sections.push(

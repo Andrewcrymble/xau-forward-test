@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/db";
+import { pruneOldExports } from "@/lib/services/maintenance-service";
 import { getImageProvider } from "@/lib/ai";
 import { getImageStorage } from "@/lib/storage";
 import { PageServiceError } from "@/lib/services/page-service";
@@ -269,6 +270,7 @@ export async function buildCover(projectId: string): Promise<CoverBuildResult> {
   const row = await prisma.export.create({
     data: { projectId, type: "cover_pdf", filePath: url },
   });
+  await pruneOldExports(projectId);
   await prisma.project.updateMany({
     where: { id: projectId, status: { in: ["plan_approved", "generating", "reviewing", "interior"] } },
     data: { status: "cover" },

@@ -1,12 +1,17 @@
 import type {
+  BookConceptDraft,
+  BookConceptRequest,
   BookPlanRequest,
   BookPlanResult,
   ListingDraft,
   ListingRequest,
+  NicheCardDraft,
+  NicheDiscoveryRequest,
   PageConceptDraft,
   TextAIProvider,
   TextUsage,
 } from "./types";
+import type { NicheSeriesIdea } from "@/lib/types";
 
 // Built-in sample planner used when no AI provider key is configured.
 // Produces varied, deterministic placeholder concepts so the whole planning
@@ -39,23 +44,33 @@ const SUBJECT_PATTERNS = [
 export class MockTextProvider implements TextAIProvider {
   readonly name = "mock";
 
-  private makeConcept(niche: string, index: number): PageConceptDraft {
+  private makeConcept(
+    req: Pick<BookPlanRequest, "niche" | "bible" | "cbnCount" | "count">,
+    index: number,
+  ): PageConceptDraft {
     const pattern = SUBJECT_PATTERNS[index % SUBJECT_PATTERNS.length];
     const variation = Math.floor(index / SUBJECT_PATTERNS.length) + 1;
-    const scene = pattern.replace("{niche}", niche);
+    const scene = pattern.replace("{niche}", req.niche);
     const suffix = variation > 1 ? ` (variation ${variation})` : "";
+    const cbn = (req.cbnCount ?? 0) > 0 && index < (req.cbnCount ?? 0);
     return {
       title: `Sample page ${index + 1}${suffix}`,
       concept:
         `${scene.charAt(0).toUpperCase()}${scene.slice(1)}.` +
         ` Sample concept — replace with a real AI provider by adding an API key in the app's environment settings.`,
+      pageType: cbn ? "colour_by_numbers" : "standard",
+      pageText: req.bible
+        ? req.bible.includeVerseText
+          ? `Sample verse text ${index + 1} — Book ${index + 1}:${(index % 20) + 1} (${req.bible.translation})`
+          : `Book ${index + 1}:${(index % 20) + 1}${req.bible.includeReference ? ` (${req.bible.translation})` : ""}`
+        : null,
     };
   }
 
   async generateBookPlan(req: BookPlanRequest): Promise<BookPlanResult> {
     const start = req.avoidTitles?.length ?? 0;
     const concepts = Array.from({ length: req.count }, (_, i) =>
-      this.makeConcept(req.niche, start + i),
+      this.makeConcept(req, start + i),
     );
     return {
       concepts,
@@ -108,6 +123,120 @@ export class MockTextProvider implements TextAIProvider {
     };
     return {
       listing,
+      usage: { provider: this.name, model: "sample-generator", tokensUsed: 0 },
+    };
+  }
+
+  async generateBookConcept(
+    req: BookConceptRequest,
+  ): Promise<{ concept: BookConceptDraft; usage: TextUsage }> {
+    const motifs = (req.artworkTheme || `${req.niche} scenes, decorative borders, botanical accents`)
+      .split(/,|\band\b/)
+      .map((m) => m.trim())
+      .filter(Boolean)
+      .slice(0, 8);
+    const concept: BookConceptDraft = {
+      creativeBrief:
+        `SAMPLE BRIEF — add an AI provider key for a real creative direction. ` +
+        `Create a ${req.complexity} colouring book about ${req.niche}` +
+        (req.subNiche ? `, focused on ${req.subNiche}` : "") +
+        (req.specificAngle ? `. Positioning: ${req.specificAngle}` : "") +
+        `. Aimed at ${req.audience}` +
+        (req.tones ? `, with an overall ${req.tones} feel` : "") +
+        `. Every page should feel like part of one professionally illustrated collection: ` +
+        `consistent line style throughout, substantial variety in composition, subject and viewpoint between pages, ` +
+        `and recurring visual motifs that tie the book together.`,
+      styleProfile: {
+        lineThickness: "consistent medium-weight black outlines",
+        decorativeStyle: "simple decorative flourishes used sparingly",
+        characterStyle: "friendly, well-proportioned characters when present",
+        botanicalStyle: "clean stylised leaves and flowers",
+        landscapeStyle: "layered foreground/midground/background scenes",
+        architecturalStyle: "simplified but recognisable structures",
+        framingStyle: "occasional thin decorative borders, most pages unframed",
+        whiteSpace: "generous breathing room around the main subject",
+        overallAesthetic: `cohesive ${req.style} aesthetic`,
+        recurringMotifs: motifs,
+        levelOfDetail: req.complexity,
+      },
+    };
+    return {
+      concept,
+      usage: { provider: this.name, model: "sample-generator", tokensUsed: 0 },
+    };
+  }
+
+  async discoverNiches(
+    req: NicheDiscoveryRequest,
+  ): Promise<{ niches: NicheCardDraft[]; usage: TextUsage }> {
+    const t = req.broadTopic.trim() || "Colouring";
+    const base = req.parentPath && req.parentPath.length > 0 ? req.parentPath : [t];
+    const angles = [
+      ["for Kids", "Children 6–8", "standard"],
+      ["for Adults", "Adults", "standard"],
+      ["Colour by Numbers", "Children 8–12", "colour_by_numbers"],
+      ["Through the Seasons", "Adults", "mixed"],
+      ["at Christmas", "Families", "standard"],
+      ["by Night", "Adults", "standard"],
+      ["for Beginners", "Colouring beginners", "standard"],
+      ["Little Details", "Adults", "standard"],
+      ["Big & Bold", "Children 4–6", "standard"],
+      ["A Gift Edition", "Gift buyers", "mixed"],
+    ] as const;
+    const combined = req.combineWith?.trim();
+    const niches: NicheCardDraft[] = Array.from(
+      { length: Math.min(req.count, angles.length) },
+      (_, i) => {
+        const [angle, aud, type] = angles[i];
+        const name = combined ? `${t} & ${combined} ${angle}` : `${t} ${angle}`;
+        return {
+          name,
+          path: [...base, combined ? `${t} & ${combined}` : angle, name],
+          audience: req.audience && req.audience !== "let_ai_decide" ? req.audience : aud,
+          concept: `SAMPLE idea — add an AI key for real niche discovery. A ${type.replace(/_/g, " ")} colouring book: ${name}.`,
+          artwork: `Signature ${t.toLowerCase()} imagery with varied compositions and settings.`,
+          bookType: req.bookType && req.bookType !== "let_ai_decide" ? req.bookType : type,
+          pageCount: 30 + (i % 3) * 10,
+          complexity: aud.startsWith("Children") ? "simple" : "detailed",
+          difficulty: i % 2 ? "moderate to execute well" : "straightforward",
+          positioning: `A ${aud.toLowerCase()}-focused ${t.toLowerCase()} colouring book differentiated by its "${angle}" angle.`,
+          giftPotential: i % 3 === 0 ? "strong gift angle" : "moderate",
+          seriesPotential: "extends naturally into sibling titles",
+          scores: {
+            specificity: 5 + (i % 5),
+            visualPotential: 6 + (i % 4),
+            variety: 5 + ((i + 1) % 5),
+            audienceClarity: 6 + (i % 4),
+            giftPotential: 4 + (i % 6),
+            seriesPotential: 5 + (i % 5),
+            cbnSuitability: type === "colour_by_numbers" ? 8 : 4 + (i % 4),
+            overall: 5 + (i % 5),
+          },
+        };
+      },
+    );
+    return {
+      niches,
+      usage: { provider: this.name, model: "sample-generator", tokensUsed: 0 },
+    };
+  }
+
+  async generateNicheSeries(niche: {
+    name: string;
+    concept?: string | null;
+    audience?: string | null;
+  }): Promise<{ series: NicheSeriesIdea; usage: TextUsage }> {
+    return {
+      series: {
+        name: `${niche.name} Series (sample)`,
+        books: [
+          `${niche.name} — Book One`,
+          `${niche.name} — Through the Seasons`,
+          `${niche.name} — At Christmas`,
+          `${niche.name} — Big & Bold Edition`,
+          `${niche.name} — The Gift Collection`,
+        ],
+      },
       usage: { provider: this.name, model: "sample-generator", tokensUsed: 0 },
     };
   }

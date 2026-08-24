@@ -1,6 +1,13 @@
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
+import { getImageStorage } from "@/lib/storage";
 import {
+  BibleSettings,
+  BookConcept,
+  CbnSettings,
+  ColouringMode,
+  DEFAULT_BIBLE_SETTINGS,
+  DEFAULT_CBN_SETTINGS,
   DEFAULT_INTERIOR_OPTIONS,
   InteriorOptions,
   ProjectDto,
@@ -24,6 +31,27 @@ function parseInteriorOptions(json: string): InteriorOptions {
   }
 }
 
+function parseJson<T>(json: string | null | undefined, fallback: T): T {
+  if (!json) return fallback;
+  try {
+    const parsed = JSON.parse(json);
+    return Array.isArray(fallback)
+      ? (parsed as T)
+      : ({ ...fallback, ...parsed } as T);
+  } catch {
+    return fallback;
+  }
+}
+
+export function parseBookConcept(json: string | null): BookConcept | null {
+  if (!json) return null;
+  try {
+    return JSON.parse(json) as BookConcept;
+  } catch {
+    return null;
+  }
+}
+
 function toDto(
   project: ProjectWithCounts,
   pageCount = 0,
@@ -36,7 +64,15 @@ function toDto(
     subtitle: project.subtitle,
     author: project.author,
     niche: project.niche,
+    subNiche: project.subNiche,
+    specificAngle: project.specificAngle,
     description: project.description,
+    emotionalTones: parseJson<string[]>(project.emotionalTones, []),
+    artworkTheme: project.artworkTheme,
+    bookConcept: parseBookConcept(project.bookConcept),
+    colouringMode: project.colouringMode as ColouringMode,
+    cbnSettings: parseJson<CbnSettings>(project.cbnSettings, { ...DEFAULT_CBN_SETTINGS }),
+    bibleSettings: parseJson<BibleSettings>(project.bibleSettings, { ...DEFAULT_BIBLE_SETTINGS }),
     targetAudience: project.targetAudience,
     customAudience: project.customAudience,
     trimSize: project.trimSize,
@@ -91,7 +127,14 @@ export async function createProject(input: ProjectCreateInput): Promise<ProjectD
       subtitle: input.subtitle ?? null,
       author: input.author ?? null,
       niche: input.niche,
+      subNiche: input.subNiche ?? null,
+      specificAngle: input.specificAngle ?? null,
       description: input.description ?? null,
+      emotionalTones: JSON.stringify(input.emotionalTones ?? []),
+      artworkTheme: input.artworkTheme ?? null,
+      colouringMode: input.colouringMode ?? "standard",
+      cbnSettings: JSON.stringify(input.cbnSettings ?? {}),
+      bibleSettings: JSON.stringify(input.bibleSettings ?? {}),
       targetAudience: input.targetAudience,
       customAudience: input.customAudience ?? null,
       trimSize: input.trimSize,
@@ -111,11 +154,14 @@ export async function updateProject(
   id: string,
   input: ProjectUpdateInput,
 ): Promise<ProjectDto | null> {
-  const { interiorOptions, ...rest } = input;
+  const { interiorOptions, emotionalTones, cbnSettings, bibleSettings, ...rest } = input;
   const data: Prisma.ProjectUpdateInput = { ...rest };
   if (interiorOptions !== undefined) {
     data.interiorOptions = JSON.stringify(interiorOptions);
   }
+  if (emotionalTones !== undefined) data.emotionalTones = JSON.stringify(emotionalTones);
+  if (cbnSettings !== undefined) data.cbnSettings = JSON.stringify(cbnSettings);
+  if (bibleSettings !== undefined) data.bibleSettings = JSON.stringify(bibleSettings);
   try {
     await prisma.project.update({ where: { id }, data });
   } catch (err) {
@@ -133,6 +179,15 @@ export async function updateProject(
 export async function deleteProject(id: string): Promise<boolean> {
   try {
     await prisma.project.delete({ where: { id } });
+    // Best-effort: remove the project's stored files (images, PDFs, ZIPs).
+    try {
+      const storage = getImageStorage();
+      for (const f of await storage.list(`projects/${id}/`)) {
+        await storage.delete(f.url);
+      }
+    } catch {
+      // Leftovers are swept up by Settings → Free up storage.
+    }
     return true;
   } catch (err) {
     if (

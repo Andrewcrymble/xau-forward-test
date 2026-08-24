@@ -1,5 +1,6 @@
 import JSZip from "jszip";
 import { prisma } from "@/lib/db";
+import { pruneOldExports } from "@/lib/services/maintenance-service";
 import { getImageStorage } from "@/lib/storage";
 import { PageServiceError } from "@/lib/services/page-service";
 import {
@@ -213,6 +214,7 @@ export async function buildKdpPackage(projectId: string): Promise<PackageBuildRe
   const row = await prisma.export.create({
     data: { projectId, type: "kdp_package", filePath: url },
   });
+  await pruneOldExports(projectId);
   await prisma.project.update({
     where: { id: projectId },
     data: { status: "complete" },

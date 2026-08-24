@@ -18,7 +18,84 @@ export const TARGET_AUDIENCES: OptionDef[] = [
   { id: "ages_8_12", label: "Ages 8–12", promptText: "older children ages 8–12" },
   { id: "teens", label: "Teens", promptText: "teenagers" },
   { id: "adults", label: "Adults", promptText: "adults" },
+  { id: "women", label: "Women", promptText: "adult women" },
+  { id: "men", label: "Men", promptText: "adult men" },
+  { id: "seniors", label: "Seniors", promptText: "older adults and seniors" },
+  { id: "families", label: "Families", promptText: "families colouring together" },
+  { id: "christian_women", label: "Christian women", promptText: "Christian women" },
+  { id: "christian_families", label: "Christian families", promptText: "Christian families" },
+  { id: "beginners", label: "Beginners", promptText: "colouring beginners of any age" },
   { id: "custom", label: "Custom" },
+];
+
+/** Multi-select emotional tones for the book's overall feel. */
+export const EMOTIONAL_TONES: OptionDef[] = [
+  { id: "hopeful", label: "Hopeful" },
+  { id: "encouraging", label: "Encouraging" },
+  { id: "peaceful", label: "Peaceful" },
+  { id: "joyful", label: "Joyful" },
+  { id: "comforting", label: "Comforting" },
+  { id: "inspirational", label: "Inspirational" },
+  { id: "reflective", label: "Reflective" },
+  { id: "faith_filled", label: "Faith-filled" },
+  { id: "fun", label: "Fun" },
+  { id: "educational", label: "Educational" },
+  { id: "relaxing", label: "Relaxing" },
+  { id: "cozy", label: "Cozy" },
+  { id: "adventurous", label: "Adventurous" },
+];
+
+export function tonesPromptText(toneIds: string[]): string {
+  const labels = toneIds
+    .map((id) => EMOTIONAL_TONES.find((t) => t.id === id)?.label.toLowerCase())
+    .filter(Boolean);
+  return labels.join(", ");
+}
+
+/** Bible translation options for scripture colouring books. Modern
+ *  translations carry publisher licensing terms — the UI must surface this
+ *  and exact wording must never be invented (flag for verification instead). */
+export const BIBLE_TRANSLATIONS: OptionDef[] = [
+  { id: "kjv", label: "KJV (public domain)" },
+  { id: "nkjv", label: "NKJV (check licence)" },
+  { id: "niv", label: "NIV (check licence)" },
+  { id: "esv", label: "ESV (check licence)" },
+  { id: "nlt", label: "NLT (check licence)" },
+  { id: "custom", label: "Custom / own wording" },
+];
+
+export const VERSE_THEMES: OptionDef[] = [
+  { id: "hope", label: "Hope" },
+  { id: "strength", label: "Strength" },
+  { id: "courage", label: "Courage" },
+  { id: "faith", label: "Faith" },
+  { id: "gods_love", label: "God's Love" },
+  { id: "peace", label: "Peace" },
+  { id: "comfort", label: "Comfort" },
+  { id: "perseverance", label: "Perseverance" },
+  { id: "trust", label: "Trust" },
+  { id: "healing", label: "Healing" },
+  { id: "gratitude", label: "Gratitude" },
+  { id: "joy", label: "Joy" },
+  { id: "prayer", label: "Prayer" },
+  { id: "gods_faithfulness", label: "God's Faithfulness" },
+  { id: "promises_of_god", label: "Promises of God" },
+];
+
+/** Colour-by-numbers difficulty — directly controls region size/count. */
+export const CBN_DIFFICULTIES: OptionDef[] = [
+  { id: "very_easy", label: "Very easy — ages 4–6", promptText: "very large simple enclosed shapes, around 10–20 big regions" },
+  { id: "easy", label: "Easy — ages 6–8", promptText: "large clear enclosed shapes, around 20–35 regions" },
+  { id: "medium", label: "Medium — ages 8–12", promptText: "medium-sized enclosed regions, around 35–60 regions" },
+  { id: "adult", label: "Adult", promptText: "smaller detailed regions, around 60–100 regions, all still practical to colour" },
+  { id: "detailed_adult", label: "Detailed adult", promptText: "fine detailed regions, around 100–160 regions, none impractically small" },
+];
+
+export const CBN_COLOUR_COUNTS = [4, 5, 6, 8, 10, 12];
+
+export const CBN_KEY_PLACEMENTS: OptionDef[] = [
+  { id: "bottom", label: "Bottom of each page" },
+  { id: "none", label: "No key on artwork (clean page)" },
 ];
 
 export const PAGE_COUNT_PRESETS = [25, 30, 40, 50, 75, 100];

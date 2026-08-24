@@ -9,10 +9,20 @@
 // accepts that same reference so later phases (PDF building) can load the
 // file body regardless of backend.
 
+export interface StoredFileInfo {
+  key: string;
+  url: string;
+  sizeBytes: number;
+}
+
 export interface ImageStorage {
   readonly name: string;
   /** Store a file under a hierarchical key; returns the servable URL. */
   put(key: string, data: Buffer, contentType: string): Promise<string>;
   /** Load a stored file's bytes from the URL returned by put(). */
   readBytes(url: string): Promise<Buffer>;
+  /** Delete a stored file by its URL. Missing files are not an error. */
+  delete(url: string): Promise<void>;
+  /** List stored files under a key prefix (used by storage cleanup). */
+  list(prefix: string): Promise<StoredFileInfo[]>;
 }

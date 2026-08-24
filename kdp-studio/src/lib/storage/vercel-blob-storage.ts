@@ -1,5 +1,5 @@
-import { put } from "@vercel/blob";
-import type { ImageStorage } from "./types";
+import { del, list, put } from "@vercel/blob";
+import type { ImageStorage, StoredFileInfo } from "./types";
 
 // Vercel Blob storage for hosted deployments. Requires
 // BLOB_READ_WRITE_TOKEN (created automatically when a Blob store is
@@ -22,5 +22,22 @@ export class VercelBlobStorage implements ImageStorage {
     const res = await fetch(url);
     if (!res.ok) throw new Error(`Failed to fetch stored file (${res.status})`);
     return Buffer.from(await res.arrayBuffer());
+  }
+
+  async delete(url: string): Promise<void> {
+    await del(url);
+  }
+
+  async list(prefix: string): Promise<StoredFileInfo[]> {
+    const out: StoredFileInfo[] = [];
+    let cursor: string | undefined;
+    do {
+      const page = await list({ prefix, cursor, limit: 1000 });
+      for (const b of page.blobs) {
+        out.push({ key: b.pathname, url: b.url, sizeBytes: b.size });
+      }
+      cursor = page.hasMore ? page.cursor : undefined;
+    } while (cursor);
+    return out;
   }
 }

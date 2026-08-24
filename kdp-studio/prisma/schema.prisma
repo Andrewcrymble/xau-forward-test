@@ -33,8 +33,28 @@ model Project {
   title       String
   subtitle    String?
   author      String?
-  niche       String
+  niche       String  // main niche, e.g. "Christian", "Dinosaurs", "European Cities"
+  subNiche    String? // e.g. "Encouraging Bible Verses", "Cute Baby Dinosaurs"
+  // Specific theme / positioning angle — free description of what makes THIS
+  // book different from others in the same niche.
+  specificAngle String?
   description String?
+
+  // Multi-select emotional tones — JSON-encoded string[] of EmotionalTone ids
+  emotionalTones String @default("[]")
+  // Recurring imagery the artwork should draw on, free text
+  artworkTheme   String?
+
+  // Persistent creative direction — JSON-encoded BookConcept (creative brief
+  // + Book Style Profile) passed into every image-generation prompt.
+  bookConcept String?
+
+  // "standard" | "colour_by_numbers" | "mixed"
+  colouringMode String @default("standard")
+  // JSON-encoded CbnSettings: counts/difficulty/colours/palette/key placement
+  cbnSettings   String @default("{}")
+  // JSON-encoded BibleSettings when the niche involves scripture
+  bibleSettings String @default("{}")
 
   // Audience / format
   targetAudience String // TargetAudience id, e.g. "ages_4_8" | "adults" | "custom"
@@ -72,6 +92,16 @@ model ColouringPage {
   pageNumber Int
   title      String
   concept    String
+  // "standard" | "colour_by_numbers"
+  pageType   String  @default("standard")
+  // Verse or quote text intentionally included in the artwork (with source
+  // reference), plus a verification flag — never invented scripture.
+  pageText   String?
+  // JSON-encoded CbnPageData: palette, region assignments, difficulty,
+  // numbered/reference image keys, validation findings.
+  cbnData    String?
+  // Completed coloured reference image (colour-by-numbers answer version)
+  completedReference String?
   prompt     String  @default("")
   // True once the user hand-edits the prompt; auto-rebuilds then stop.
   promptEdited Boolean @default(false)
@@ -134,6 +164,52 @@ model Export {
   type      String // "interior_pdf" | "cover_pdf" | "kdp_package" | ...
   filePath  String
   createdAt DateTime @default(now())
+}
+
+// A saved niche concept from the Find Me a Niche engine. All scores are AI
+// concept analysis — NEVER verified market data; genuine research results,
+// when added later, live in the separate marketData column so the two are
+// never mixed.
+model NicheIdea {
+  id     String  @id @default(cuid())
+  userId String?
+
+  broadTopic String // what the user typed, e.g. "Christian", "Belfast"
+  name       String // final niche name
+  // JSON-encoded string[] — the niche tree path, broad → specific
+  path       String @default("[]")
+
+  audience     String?
+  concept      String? // book concept summary
+  artwork      String? // suggested artwork direction
+  bookType     String? // "standard" | "colour_by_numbers" | "mixed" | ...
+  pageCount    Int?
+  complexity   String? // recommended ComplexityId
+  difficulty   String? // how hard the book is to produce well
+  positioning  String? // who/what/why/differentiation statement
+  giftPotential   String?
+  seriesPotential String?
+
+  // JSON-encoded NicheScores (1-10 concept scores, AI opinion only)
+  scores String @default("{}")
+  // JSON-encoded series suggestion { name, books[] } when generated
+  seriesIdeas String?
+  // Reserved for FUTURE verified research (Amazon results, prices, reviews…)
+  // — kept strictly separate from the AI concept scores above.
+  marketData String?
+
+  // "new" | "favourite" | "considering" | "building" | "book_created" | "rejected"
+  status String @default("new")
+  // Lineage for GO DEEPER / COMBINE — the parent idea this was derived from
+  parentId String?
+  // Set when BUILD THIS BOOK creates a project from this idea
+  linkedProjectId String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([broadTopic])
+  @@index([status])
 }
 
 // Cost / usage tracking for every AI request (text or image).

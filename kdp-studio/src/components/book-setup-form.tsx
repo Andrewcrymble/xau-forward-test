@@ -56,6 +56,8 @@ const EMPTY_FORM: FormState = {
   customStyle: "",
   complexity: DEFAULT_COMPLEXITY_FOR_AUDIENCE["ages_4_8"],
   complexityOverridden: false,
+  emotionalTones: [],
+  colouringMode: "standard",
   interiorOptions: { ...DEFAULT_INTERIOR_OPTIONS },
 };
 
@@ -75,6 +77,13 @@ function projectToForm(p: ProjectDto): FormState {
     customStyle: p.customStyle ?? "",
     complexity: p.complexity,
     complexityOverridden: p.complexityOverridden,
+    subNiche: p.subNiche ?? "",
+    specificAngle: p.specificAngle ?? "",
+    emotionalTones: p.emotionalTones,
+    artworkTheme: p.artworkTheme ?? "",
+    colouringMode: p.colouringMode,
+    cbnSettings: p.cbnSettings,
+    bibleSettings: p.bibleSettings,
     interiorOptions: p.interiorOptions,
   };
 }

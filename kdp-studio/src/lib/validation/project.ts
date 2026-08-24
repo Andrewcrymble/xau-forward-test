@@ -1,13 +1,19 @@
 import { z } from "zod";
 import {
+  BIBLE_TRANSLATIONS,
+  CBN_COLOUR_COUNTS,
+  CBN_DIFFICULTIES,
+  CBN_KEY_PLACEMENTS,
   COMPLEXITY_LEVELS,
+  EMOTIONAL_TONES,
   MAX_PAGE_COUNT,
   MIN_PAGE_COUNT,
   STYLES,
   TARGET_AUDIENCES,
+  VERSE_THEMES,
 } from "@/lib/config/book-options";
 import { TRIM_SIZES } from "@/lib/config/kdp-spec";
-import { PROJECT_STATUSES } from "@/lib/types";
+import { COLOURING_MODES, PROJECT_STATUSES } from "@/lib/types";
 
 const audienceIds = TARGET_AUDIENCES.map((a) => a.id) as [string, ...string[]];
 const styleIds = STYLES.map((s) => s.id) as [string, ...string[]];
@@ -34,7 +40,48 @@ const baseProjectSchema = z.object({
   subtitle: z.string().trim().max(300).nullish(),
   author: z.string().trim().max(200).nullish(),
   niche: z.string().trim().min(1, "Niche/topic is required").max(500),
+  subNiche: z.string().trim().max(500).nullish(),
+  specificAngle: z.string().trim().max(3000).nullish(),
   description: z.string().trim().max(2000).nullish(),
+  emotionalTones: z
+    .array(z.enum(EMOTIONAL_TONES.map((t) => t.id) as [string, ...string[]]))
+    .max(EMOTIONAL_TONES.length)
+    .default([]),
+  artworkTheme: z.string().trim().max(3000).nullish(),
+  colouringMode: z.enum(COLOURING_MODES).default("standard"),
+  cbnSettings: z
+    .object({
+      cbnPageCount: z.number().int().min(0).max(MAX_PAGE_COUNT),
+      difficulty: z.enum(CBN_DIFFICULTIES.map((d) => d.id) as [string, ...string[]]),
+      colourCount: z
+        .number()
+        .int()
+        .min(Math.min(...CBN_COLOUR_COUNTS))
+        .max(20),
+      paletteMode: z.enum(["ai", "custom"]),
+      customPalette: z
+        .array(
+          z.object({
+            name: z.string().trim().min(1).max(40),
+            hex: z.string().regex(/^#[0-9a-fA-F]{6}$/),
+          }),
+        )
+        .max(20),
+      keyPlacement: z.enum(CBN_KEY_PLACEMENTS.map((k) => k.id) as [string, ...string[]]),
+      autoSelectPages: z.boolean(),
+    })
+    .optional(),
+  bibleSettings: z
+    .object({
+      enabled: z.boolean(),
+      translation: z.enum(BIBLE_TRANSLATIONS.map((t) => t.id) as [string, ...string[]]),
+      themes: z
+        .array(z.enum(VERSE_THEMES.map((t) => t.id) as [string, ...string[]]))
+        .max(VERSE_THEMES.length),
+      includeVerseText: z.boolean(),
+      includeReference: z.boolean(),
+    })
+    .optional(),
   targetAudience: z.enum(audienceIds),
   customAudience: z.string().trim().max(200).nullish(),
   trimSize: z.enum(trimSizeIds),

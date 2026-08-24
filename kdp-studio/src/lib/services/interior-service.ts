@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/db";
+import { pruneOldExports } from "@/lib/services/maintenance-service";
 import { getImageStorage } from "@/lib/storage";
 import { PageServiceError } from "@/lib/services/page-service";
 import { buildInteriorPdf } from "@/lib/pdf/interior-pdf";
@@ -197,6 +198,7 @@ export async function buildInterior(projectId: string): Promise<InteriorBuildRes
   const row = await prisma.export.create({
     data: { projectId, type: "interior_pdf", filePath: url },
   });
+  await pruneOldExports(projectId);
   await prisma.project.updateMany({
     where: { id: projectId, status: { in: ["generating", "reviewing", "plan_approved"] } },
     data: { status: "interior" },

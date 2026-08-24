@@ -1,4 +1,5 @@
 import { Card } from "@/components/ui";
+import { StorageCard } from "@/components/storage-card";
 import { INTERIOR_IMAGE, MAX_CONCURRENT_GENERATIONS } from "@/lib/config/kdp-spec";
 
 export default function SettingsPage() {
@@ -18,6 +19,7 @@ export default function SettingsPage() {
           onwards.
         </p>
       </Card>
+      <StorageCard />
       <Card className="space-y-3">
         <h2 className="text-base font-semibold text-stone-900">Print defaults</h2>
         <ul className="space-y-1 text-sm text-stone-600">
