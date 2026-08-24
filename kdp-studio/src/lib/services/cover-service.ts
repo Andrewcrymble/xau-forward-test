@@ -62,6 +62,26 @@ async function ensureCover(projectId: string) {
   return { project, cover };
 }
 
+/** Up to `count` approved page images, sampled evenly across the book, for
+ *  the back-cover showcase layout (1 hero + 2 stacked + a row of 4). */
+export async function showcasePageUrls(
+  projectId: string,
+  count = 7,
+): Promise<string[]> {
+  const pages = await prisma.colouringPage.findMany({
+    where: { projectId, approvalStatus: "approved", NOT: { processedImage: null } },
+    orderBy: { pageNumber: "asc" },
+    select: { processedImage: true },
+  });
+  const urls = pages.map((p) => p.processedImage!);
+  if (urls.length <= count) return urls;
+  const picked: string[] = [];
+  for (let i = 0; i < count; i++) {
+    picked.push(urls[Math.round((i * (urls.length - 1)) / (count - 1))]);
+  }
+  return [...new Set(picked)];
+}
+
 async function toDto(projectId: string): Promise<CoverDto> {
   const { project, cover } = await ensureCover(projectId);
   const settings = parseSettings(cover.settings);
@@ -79,6 +99,7 @@ async function toDto(projectId: string): Promise<CoverDto> {
     spineText: cover.spineText,
     backCoverText: cover.backCoverText,
     artwork: cover.artwork,
+    showcasePages: await showcasePageUrls(projectId),
     settings,
     dims: {
       pageCount: layout.pageCount,
@@ -218,6 +239,12 @@ export async function buildCover(projectId: string): Promise<CoverBuildResult> {
 
   const storage = getImageStorage();
   const artwork = cover.artwork ? await storage.readBytes(cover.artwork) : null;
+  const showcaseImages =
+    settings.backLayout === "showcase"
+      ? await Promise.all(
+          (await showcasePageUrls(projectId)).map((u) => storage.readBytes(u)),
+        )
+      : [];
 
   const { pdf } = await buildCoverPdf({
     title: cover.title ?? project.title,
@@ -226,6 +253,7 @@ export async function buildCover(projectId: string): Promise<CoverBuildResult> {
     spineText: cover.spineText,
     backCoverText: cover.backCoverText,
     artwork,
+    showcaseImages,
     settings,
     trimSizeId: project.trimSize,
     pageCount: layout.pageCount,

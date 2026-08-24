@@ -131,6 +131,12 @@ export interface CoverSettings {
   effectColor: string; // hex
   /** Spine + back cover background. */
   backgroundColor: string; // hex
+  /** Back cover content: description text, or a framed grid of sample pages. */
+  backLayout: "text" | "showcase";
+  /** Back-cover description text size in points. */
+  backTextSize: number;
+  /** Semi-transparent frame (in the effect colour) behind the back-cover text. */
+  backTextPanel: boolean;
   /** Keep Amazon's barcode area clear on the back cover (default ON). */
   barcodeAreaClear: boolean;
   /** Carry the front artwork across the back cover (darkened for text). */
@@ -149,6 +155,9 @@ export const DEFAULT_COVER_SETTINGS: CoverSettings = {
   textEffect: "outline",
   effectColor: "#000000",
   backgroundColor: "#2f5d8a",
+  backLayout: "text",
+  backTextSize: 16,
+  backTextPanel: true,
   barcodeAreaClear: true,
   backArtwork: false,
   artworkVersions: [],
@@ -176,6 +185,8 @@ export interface CoverDto {
   spineText: string | null;
   backCoverText: string | null;
   artwork: string | null;
+  /** Approved interior pages sampled for the back-cover showcase layout. */
+  showcasePages: string[];
   settings: CoverSettings;
   dims: {
     pageCount: number;

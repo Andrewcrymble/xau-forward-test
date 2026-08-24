@@ -6,6 +6,7 @@ import fontkit from "@pdf-lib/fontkit";
 import {
   BARCODE_AREA,
   COVER_SAFE_MARGIN_IN,
+  INTERIOR_IMAGE,
   MIN_SPINE_TEXT_WIDTH_IN,
   PDF_POINTS_PER_INCH,
   PRINT_DPI,
@@ -29,6 +30,8 @@ export interface CoverPdfInput {
   backCoverText: string | null;
   /** Selected front-cover artwork bytes (any size; cover-cropped to fit). */
   artwork: Buffer | null;
+  /** Approved interior page images for the back-cover showcase layout. */
+  showcaseImages: Buffer[];
   settings: CoverSettings;
   trimSizeId: string;
   pageCount: number;
@@ -314,13 +317,82 @@ export async function buildCoverPdf(input: CoverPdfInput): Promise<{
   // --- Back cover ---------------------------------------------------------
   const backSafeX = backX + safe;
   const backSafeW = panelW - 2 * safe;
-  if (input.backCoverText) {
-    const backSize = 13;
-    const lines = wrapText(input.backCoverText, display, backSize, backSafeW - 2 * safe);
+  if (input.settings.backLayout === "showcase" && input.showcaseImages.length > 0) {
+    // Framed grid of sample interior pages: two stacked thumbnails on the
+    // left, a large hero page on the right, and a row of four beneath —
+    // scaled to fit between the top safe edge and the barcode area.
+    const R = INTERIOR_IMAGE.heightPx / INTERIOR_IMAGE.widthPx;
+    const gap = 0.15 * PT;
+    const frame = 0.05 * PT;
+    const areaX = backSafeX;
+    const areaW = backSafeW;
+    const leftW = (areaW - gap * (1 + 1 / R)) / 3;
+    const heroW = areaW - gap - leftW;
+    const heroH = heroW * R;
+    const rowW = (areaW - 3 * gap) / 4;
+    const rowH = rowW * R;
+    const naturalH = heroH + gap + rowH;
+    const topLimit = pageH - bleed - safe;
+    const bottomLimit =
+      (input.settings.barcodeAreaClear
+        ? bleed + (BARCODE_AREA.insetIn + BARCODE_AREA.heightIn) * PT
+        : bleed + safe) +
+      0.15 * PT;
+    const s = Math.min(1, (topLimit - bottomLimit) / naturalH);
+    const xOff = areaX + (areaW - areaW * s) / 2;
+
+    // Slots as [x, topY, width, height], top-down from the safe edge.
+    const slots: Array<[number, number, number, number]> = [
+      [xOff + (leftW + gap) * s, topLimit, heroW * s, heroH * s],
+      [xOff, topLimit, leftW * s, leftW * R * s],
+      [xOff, topLimit - (leftW * R + gap) * s, leftW * s, leftW * R * s],
+    ];
+    for (let i = 0; i < 4; i++) {
+      slots.push([
+        xOff + i * (rowW + gap) * s,
+        topLimit - (heroH + gap) * s,
+        rowW * s,
+        rowH * s,
+      ]);
+    }
+    for (let i = 0; i < Math.min(slots.length, input.showcaseImages.length); i++) {
+      const [x, top, w, h] = slots[i];
+      const y = top - h;
+      // Downscale to print resolution for the slot so the PDF stays small.
+      const png = await sharp(input.showcaseImages[i])
+        .resize(Math.round((w / PT) * PRINT_DPI), null, { fit: "inside" })
+        .png()
+        .toBuffer();
+      const image = await doc.embedPng(png);
+      page.drawRectangle({
+        x: x - frame, y: y - frame, width: w + 2 * frame, height: h + 2 * frame,
+        color: rgb(1, 1, 1),
+      });
+      page.drawImage(image, { x, y, width: w, height: h });
+    }
+  } else if (input.backCoverText) {
+    const backSize = input.settings.backTextSize;
+    const areaX = backSafeX + safe;
+    const areaW = backSafeW - 2 * safe;
+    const lines = wrapText(input.backCoverText, display, backSize, areaW);
+    const topY = pageH - bleed - safe - 40;
+    if (input.settings.backTextPanel) {
+      // Semi-transparent frame behind the description, sized to the wrapped
+      // lines, so the text stays legible over back-cover artwork.
+      const pad = backSize * 0.9;
+      const top = topY + backSize * 0.75;
+      const bottom = topY - (lines.length - 1) * backSize * 1.25 - backSize * 0.28;
+      page.drawRectangle({
+        x: areaX - pad,
+        y: bottom - pad,
+        width: areaW + 2 * pad,
+        height: top - bottom + 2 * pad,
+        color: effectColour,
+        opacity: 0.72,
+      });
+    }
     drawAlignedLines(
-      page, lines, display, backSize,
-      backSafeX + safe, backSafeW - 2 * safe,
-      pageH - bleed - safe - 40, "center", textColour,
+      page, lines, display, backSize, areaX, areaW, topY, "center", textColour,
     );
   }
   if (input.settings.barcodeAreaClear) {

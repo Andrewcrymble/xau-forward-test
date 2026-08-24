@@ -88,6 +88,43 @@ export function CoverPreview({
 
   const guide = "absolute border border-dashed";
 
+  // Back-cover showcase grid (mirrors the PDF layout maths): two stacked
+  // thumbnails left, hero page right, row of four beneath, scaled to fit
+  // above the barcode area. Slots are [xIn, topIn, wIn, hIn] from the top.
+  const showcase = settings.backLayout === "showcase" && cover.showcasePages.length > 0;
+  let showcaseSlots: Array<[number, number, number, number]> = [];
+  if (showcase) {
+    const R = 3300 / 2550;
+    const gap = 0.15;
+    const areaW = panelW - 2 * safe;
+    const leftW = (areaW - gap * (1 + 1 / R)) / 3;
+    const heroW = areaW - gap - leftW;
+    const heroH = heroW * R;
+    const rowW = (areaW - 3 * gap) / 4;
+    const rowH = rowW * R;
+    const naturalH = heroH + gap + rowH;
+    const topIn = dims.bleedIn + safe;
+    const bottomIn = settings.barcodeAreaClear
+      ? dims.bleedIn + BARCODE_AREA.insetIn + BARCODE_AREA.heightIn
+      : dims.bleedIn + safe;
+    const s = Math.min(1, (dims.totalHeightIn - topIn - bottomIn - 0.15) / naturalH);
+    const xOff = backX + safe + (areaW - areaW * s) / 2;
+    showcaseSlots = [
+      [xOff + (leftW + gap) * s, topIn, heroW * s, heroH * s],
+      [xOff, topIn, leftW * s, leftW * R * s],
+      [xOff, topIn + (leftW * R + gap) * s, leftW * s, leftW * R * s],
+    ];
+    for (let i = 0; i < 4; i++) {
+      showcaseSlots.push([
+        xOff + i * (rowW + gap) * s,
+        topIn + (heroH + gap) * s,
+        rowW * s,
+        rowH * s,
+      ]);
+    }
+    showcaseSlots = showcaseSlots.slice(0, cover.showcasePages.length);
+  }
+
   return (
     <div
       ref={ref}
@@ -232,8 +269,30 @@ export function CoverPreview({
         </div>
       )}
 
+      {/* Back cover: sample-page showcase grid */}
+      {showcase &&
+        showcaseSlots.map(([x, top, w, h], i) => (
+          <div
+            key={i}
+            className="absolute bg-white"
+            style={{
+              left: pct(x),
+              top: vpct(top),
+              width: pct(w),
+              height: vpct(h),
+              padding: 0.05 * 72 * scale,
+            }}
+          >
+            <img
+              src={cover.showcasePages[i]}
+              alt={`Sample page ${i + 1}`}
+              className="h-full w-full object-cover"
+            />
+          </div>
+        ))}
+
       {/* Back cover text */}
-      {cover.backCoverText && (
+      {!showcase && cover.backCoverText && (
         <div
           className="absolute whitespace-pre-wrap text-center"
           style={{
@@ -241,8 +300,14 @@ export function CoverPreview({
             width: pct(panelW - 4 * safe),
             top: vpct(dims.bleedIn + safe + 0.35),
             color: textColor,
-            fontSize: 13 * scale,
-            lineHeight: 1.35,
+            fontSize: settings.backTextSize * scale,
+            lineHeight: 1.3,
+            ...(settings.backTextPanel
+              ? {
+                  background: hexToRgba(settings.effectColor, 0.72),
+                  padding: `${settings.backTextSize * 0.7 * scale}px ${settings.backTextSize * 0.9 * scale}px`,
+                }
+              : {}),
           }}
         >
           {cover.backCoverText}

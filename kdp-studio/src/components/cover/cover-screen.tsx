@@ -279,11 +279,41 @@ export function CoverScreen({
                   type="color"
                   value={/^#/.test(settings.effectColor) ? settings.effectColor : "#000000"}
                   onChange={(e) => patch({}, { effectColor: e.target.value })}
-                  disabled={settings.textEffect === "none"}
+                  disabled={settings.textEffect === "none" && !settings.backTextPanel}
                   className="h-9 w-full cursor-pointer rounded-lg border border-stone-300 disabled:cursor-not-allowed disabled:opacity-40"
                 />
               </Field>
+              <Field label="Back cover layout">
+                <Select value={settings.backLayout} onChange={(e) => patch({}, { backLayout: e.target.value as CoverSettings["backLayout"] })}>
+                  <option value="text">Description text</option>
+                  <option value="showcase">Sample page showcase</option>
+                </Select>
+              </Field>
+              <Field label="Back text size">
+                <Select
+                  value={String(settings.backTextSize)}
+                  onChange={(e) => patch({}, { backTextSize: Number(e.target.value) })}
+                  disabled={settings.backLayout === "showcase"}
+                >
+                  {[12, 14, 16, 18, 20, 22, 24].map((s) => (
+                    <option key={s} value={s}>{s} pt</option>
+                  ))}
+                </Select>
+              </Field>
             </div>
+            {settings.backLayout === "showcase" && (
+              <p className="text-xs text-stone-500">
+                Shows up to 7 approved pages from the Images tab in white
+                frames — one large, six thumbnails — sampled evenly across
+                the book.
+              </p>
+            )}
+            <Checkbox
+              label="Frame behind back-cover text"
+              hint="Semi-transparent panel in the effect colour keeps the description readable"
+              checked={settings.backTextPanel}
+              onChange={(e) => patch({}, { backTextPanel: e.target.checked })}
+            />
             <Checkbox
               label="Use artwork on back cover"
               hint="Carries the front artwork across the back, darkened so text stays readable"
