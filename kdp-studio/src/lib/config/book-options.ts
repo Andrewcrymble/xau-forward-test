@@ -98,6 +98,22 @@ export const CBN_KEY_PLACEMENTS: OptionDef[] = [
   { id: "none", label: "No key on artwork (clean page)" },
 ];
 
+/** Sensible starting palette for custom colour-by-numbers palettes. */
+export const DEFAULT_CBN_PALETTE: { name: string; hex: string }[] = [
+  { name: "Yellow", hex: "#f5d90a" },
+  { name: "Light Blue", hex: "#7ec8e3" },
+  { name: "Dark Blue", hex: "#1d4e89" },
+  { name: "Green", hex: "#4caf50" },
+  { name: "Red", hex: "#e53935" },
+  { name: "Purple", hex: "#8e44ad" },
+  { name: "Orange", hex: "#f39c12" },
+  { name: "Brown", hex: "#795548" },
+  { name: "Pink", hex: "#f48fb1" },
+  { name: "Teal", hex: "#009688" },
+  { name: "Grey", hex: "#9e9e9e" },
+  { name: "Black", hex: "#212121" },
+];
+
 export const PAGE_COUNT_PRESETS = [25, 30, 40, 50, 75, 100];
 export const MIN_PAGE_COUNT = 1;
 export const MAX_PAGE_COUNT = 300;

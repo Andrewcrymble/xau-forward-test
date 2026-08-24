@@ -385,6 +385,66 @@ export async function replaceConcept(pageId: string): Promise<PageDto> {
   return toDto(updated);
 }
 
+/** Duplicate a page's concept directly after it (no artwork is copied). */
+export async function duplicatePage(pageId: string): Promise<PageDto> {
+  const page = await prisma.colouringPage.findUnique({ where: { id: pageId } });
+  if (!page) throw new PageServiceError("Page not found", 404);
+  const project = await requireProject(page.projectId);
+  const siblings = await prisma.colouringPage.findMany({
+    where: { projectId: page.projectId },
+    select: { id: true, title: true, pageNumber: true },
+    orderBy: { pageNumber: "asc" },
+  });
+  const title = `${page.title} (copy)`;
+  const created = await prisma.colouringPage.create({
+    data: {
+      projectId: page.projectId,
+      pageNumber: siblings.length + 1,
+      title,
+      concept: page.concept,
+      pageType: page.pageType,
+      pageText: page.pageText,
+      notes: page.notes,
+      prompt: composePrompt(
+        project,
+        page.concept,
+        siblings.map((s) => s.title),
+        page.pageText,
+      ),
+    },
+  });
+  // Slot the copy directly after the original.
+  const order = siblings.map((s) => s.id);
+  order.splice(order.indexOf(pageId) + 1, 0, created.id);
+  await reorderPages(page.projectId, order);
+  const fresh = await prisma.colouringPage.findUnique({ where: { id: created.id } });
+  return toDto(fresh!);
+}
+
+/** Switch a page between standard and colour-by-numbers. */
+export async function convertPageType(
+  pageId: string,
+  pageType: "standard" | "colour_by_numbers",
+): Promise<PageDto> {
+  const page = await prisma.colouringPage.findUnique({ where: { id: pageId } });
+  if (!page) throw new PageServiceError("Page not found", 404);
+  if (page.approvalStatus === "approved") {
+    throw new PageServiceError(
+      "This page is approved — un-approve it before converting its type.",
+      409,
+    );
+  }
+  const updated = await prisma.colouringPage.update({
+    where: { id: pageId },
+    data: {
+      pageType,
+      // Old CBN artefacts no longer apply after conversion.
+      ...(pageType === "standard" ? { cbnData: null, completedReference: null } : {}),
+    },
+  });
+  return toDto(updated);
+}
+
 /** Delete a page and renumber the remainder contiguously. */
 export async function deletePage(pageId: string): Promise<void> {
   const page = await prisma.colouringPage.findUnique({ where: { id: pageId } });

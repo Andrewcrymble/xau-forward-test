@@ -33,6 +33,8 @@ export function PageConceptCard({
   onMove,
   onReplace,
   onDelete,
+  onDuplicate,
+  onConvert,
 }: {
   page: PageDto;
   isFirst: boolean;
@@ -46,6 +48,8 @@ export function PageConceptCard({
   onMove: (pageId: string, direction: -1 | 1) => void;
   onReplace: (pageId: string) => Promise<void>;
   onDelete: (pageId: string) => Promise<void>;
+  onDuplicate: (pageId: string) => Promise<void>;
+  onConvert: (pageId: string, pageType: "standard" | "colour_by_numbers") => Promise<void>;
 }) {
   const [title, setTitle] = useState(page.title);
   const [concept, setConcept] = useState(page.concept);
@@ -110,12 +114,25 @@ export function PageConceptCard({
                 queueSave({ title: e.target.value });
               }}
             />
+            {page.pageType === "colour_by_numbers" && (
+              <span className="flex-none rounded-full bg-sky-100 px-2.5 py-1 text-xs font-semibold text-sky-800">
+                Colour by Numbers
+              </span>
+            )}
             <span
               className={`flex-none rounded-full px-2.5 py-1 text-xs font-semibold ${STATUS_STYLES[page.generationStatus] ?? STATUS_STYLES.planned}`}
             >
               {STATUS_LABELS[page.generationStatus] ?? page.generationStatus}
             </span>
           </div>
+          {page.pageText && (
+            <p className="rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-900">
+              <span className="font-semibold">Text in artwork:</span> {page.pageText}
+              <span className="mt-0.5 block text-[10px] text-amber-700">
+                Verify wording and reference before publishing.
+              </span>
+            </p>
+          )}
           <TextArea
             value={concept}
             aria-label={`Page ${page.pageNumber} concept`}
@@ -182,6 +199,34 @@ export function PageConceptCard({
               onClick={handleReplace}
             >
               {replacing ? "Replacing…" : "Replace concept"}
+            </button>
+            <button
+              type="button"
+              className={actionBtn}
+              disabled={busy}
+              onClick={() => onDuplicate(page.id)}
+            >
+              Duplicate
+            </button>
+            <button
+              type="button"
+              className={actionBtn}
+              disabled={busy || page.approvalStatus === "approved"}
+              title={
+                page.approvalStatus === "approved"
+                  ? "Un-approve the page before converting its type"
+                  : undefined
+              }
+              onClick={() =>
+                onConvert(
+                  page.id,
+                  page.pageType === "colour_by_numbers" ? "standard" : "colour_by_numbers",
+                )
+              }
+            >
+              {page.pageType === "colour_by_numbers"
+                ? "Convert to standard"
+                : "Convert to colour by numbers"}
             </button>
             <button
               type="button"

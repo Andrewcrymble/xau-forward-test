@@ -7,14 +7,21 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
+  BIBLE_TRANSLATIONS,
+  CBN_COLOUR_COUNTS,
+  CBN_DIFFICULTIES,
+  CBN_KEY_PLACEMENTS,
   COMPLEXITY_LEVELS,
+  DEFAULT_CBN_PALETTE,
   DEFAULT_COMPLEXITY_FOR_AUDIENCE,
+  EMOTIONAL_TONES,
   INTERIOR_OPTION_DEFS,
   MAX_PAGE_COUNT,
   MIN_PAGE_COUNT,
   PAGE_COUNT_PRESETS,
   STYLES,
   TARGET_AUDIENCES,
+  VERSE_THEMES,
 } from "@/lib/config/book-options";
 import { TRIM_SIZES } from "@/lib/config/kdp-spec";
 import {
@@ -22,8 +29,12 @@ import {
   type ProjectCreateInput,
 } from "@/lib/validation/project";
 import {
+  DEFAULT_BIBLE_SETTINGS,
+  DEFAULT_CBN_SETTINGS,
   DEFAULT_INTERIOR_OPTIONS,
   type ApiResponse,
+  type BibleSettings,
+  type CbnSettings,
   type InteriorOptions,
   type ProjectDto,
 } from "@/lib/types";
@@ -37,6 +48,7 @@ import {
   TextInput,
 } from "@/components/ui";
 import { ComplexityPreview, StylePreview } from "@/components/style-previews";
+import { BookConceptCard } from "@/components/book-concept-card";
 
 type FormState = ProjectCreateInput;
 type FieldErrors = Partial<Record<string, string>>;
@@ -56,8 +68,13 @@ const EMPTY_FORM: FormState = {
   customStyle: "",
   complexity: DEFAULT_COMPLEXITY_FOR_AUDIENCE["ages_4_8"],
   complexityOverridden: false,
+  subNiche: "",
+  specificAngle: "",
   emotionalTones: [],
+  artworkTheme: "",
   colouringMode: "standard",
+  cbnSettings: { ...DEFAULT_CBN_SETTINGS },
+  bibleSettings: { ...DEFAULT_BIBLE_SETTINGS },
   interiorOptions: { ...DEFAULT_INTERIOR_OPTIONS },
 };
 
@@ -100,8 +117,8 @@ function validate(form: FormState): FieldErrors {
 }
 
 const WIZARD_STEPS = [
-  { title: "Book details", fields: ["name", "title", "subtitle", "niche", "description", "targetAudience", "customAudience"] },
-  { title: "Pages & size", fields: ["numberOfDesigns", "trimSize"] },
+  { title: "Book niche", fields: ["name", "title", "subtitle", "niche", "subNiche", "specificAngle", "description", "targetAudience", "customAudience", "emotionalTones", "artworkTheme", "bibleSettings"] },
+  { title: "Pages & mode", fields: ["numberOfDesigns", "trimSize", "colouringMode", "cbnSettings"] },
   { title: "Style & complexity", fields: ["style", "customStyle", "complexity"] },
   { title: "Interior options", fields: ["interiorOptions"] },
 ];
@@ -235,6 +252,88 @@ export function BookSetupForm({
   };
 
   // --- Sections ----------------------------------------------------------
+  const bible: BibleSettings = form.bibleSettings ?? { ...DEFAULT_BIBLE_SETTINGS };
+  const setBible = (patch: Partial<BibleSettings>) =>
+    update({ bibleSettings: { ...bible, ...patch } });
+  const cbn: CbnSettings = form.cbnSettings ?? { ...DEFAULT_CBN_SETTINGS };
+  const setCbn = (patch: Partial<CbnSettings>) =>
+    update({ cbnSettings: { ...cbn, ...patch } });
+
+  const sectionBible = (
+    <div className="space-y-3 rounded-xl border border-stone-200 bg-stone-50 p-4">
+      <Checkbox
+        label="Bible verse settings"
+        hint="Pair every page with scripture — for Christian / scripture niches"
+        checked={bible.enabled}
+        onChange={(e) => setBible({ enabled: e.target.checked })}
+      />
+      {bible.enabled && (
+        <div className="space-y-3">
+          <div className="grid gap-3 sm:grid-cols-2">
+            <Field label="Bible translation">
+              <Select
+                value={bible.translation}
+                onChange={(e) => setBible({ translation: e.target.value })}
+              >
+                {BIBLE_TRANSLATIONS.map((t) => (
+                  <option key={t.id} value={t.id}>{t.label}</option>
+                ))}
+              </Select>
+            </Field>
+            <div className="space-y-2 pt-1">
+              <Checkbox
+                label="Include verse text in artwork"
+                checked={bible.includeVerseText}
+                onChange={(e) => setBible({ includeVerseText: e.target.checked })}
+              />
+              <Checkbox
+                label="Include scripture reference"
+                checked={bible.includeReference}
+                onChange={(e) => setBible({ includeReference: e.target.checked })}
+              />
+            </div>
+          </div>
+          <Field label="Verse themes (choose any)">
+            <div className="flex flex-wrap gap-2">
+              {VERSE_THEMES.map((t) => {
+                const active = bible.themes.includes(t.id);
+                return (
+                  <button
+                    key={t.id}
+                    type="button"
+                    aria-pressed={active}
+                    onClick={() =>
+                      setBible({
+                        themes: active
+                          ? bible.themes.filter((id) => id !== t.id)
+                          : [...bible.themes, t.id],
+                      })
+                    }
+                    className={`rounded-full border px-3 py-1 text-xs font-semibold transition-colors ${
+                      active
+                        ? "border-stone-900 bg-stone-900 text-white"
+                        : "border-stone-300 bg-white text-stone-700 hover:bg-stone-100"
+                    }`}
+                  >
+                    {t.label}
+                  </button>
+                );
+              })}
+            </div>
+          </Field>
+          <p className="text-xs text-amber-700">
+            Scripture is never invented or paraphrased by the app: every
+            AI-supplied verse is flagged for verification against a printed
+            copy of your chosen translation. Modern translations (NIV, ESV,
+            NLT, NKJV) have publisher licensing terms for commercial use —
+            check them before publishing. KJV is public domain in most
+            territories.
+          </p>
+        </div>
+      )}
+    </div>
+  );
+
   const sectionDetails = (
     <Card className="space-y-4">
       <h2 className="text-base font-semibold text-stone-900">Book details</h2>
@@ -272,11 +371,36 @@ export function BookSetupForm({
           placeholder="e.g. A. Crymble"
         />
       </Field>
-      <Field label="Niche / topic" error={errors.niche}>
-        <TextInput
-          value={form.niche}
-          onChange={(e) => update({ niche: e.target.value })}
-          placeholder="e.g. Famous European cities and landmarks"
+      <div className="grid gap-4 sm:grid-cols-2">
+        <Field label="Main niche" error={errors.niche}>
+          <TextInput
+            value={form.niche}
+            onChange={(e) => update({ niche: e.target.value })}
+            placeholder="e.g. Christian, Dinosaurs, European Cities"
+          />
+        </Field>
+        <Field
+          label="Sub-niche (optional)"
+          hint="A more specific slice of the main niche"
+          error={errors.subNiche}
+        >
+          <TextInput
+            value={form.subNiche ?? ""}
+            onChange={(e) => update({ subNiche: e.target.value })}
+            placeholder="e.g. Encouraging Bible Verses, Cute Baby Dinosaurs"
+          />
+        </Field>
+      </div>
+      <Field
+        label="Specific theme / angle (optional)"
+        hint="What makes THIS book different from others in the same niche — its exact positioning"
+        error={errors.specificAngle}
+      >
+        <TextArea
+          rows={3}
+          value={form.specificAngle ?? ""}
+          onChange={(e) => update({ specificAngle: e.target.value })}
+          placeholder="e.g. An encouraging Christian colouring book focused specifically on Bible verses about hope, strength and trusting God during difficult seasons."
         />
       </Field>
       <Field
@@ -312,6 +436,50 @@ export function BookSetupForm({
           </Field>
         )}
       </div>
+      <Field
+        label="Emotional tone (choose any that fit)"
+        hint="Sets the feeling every page should communicate"
+      >
+        <div className="flex flex-wrap gap-2">
+          {EMOTIONAL_TONES.map((t) => {
+            const active = (form.emotionalTones ?? []).includes(t.id);
+            return (
+              <button
+                key={t.id}
+                type="button"
+                aria-pressed={active}
+                onClick={() =>
+                  update({
+                    emotionalTones: active
+                      ? (form.emotionalTones ?? []).filter((id) => id !== t.id)
+                      : [...(form.emotionalTones ?? []), t.id],
+                  })
+                }
+                className={`rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors ${
+                  active
+                    ? "border-stone-900 bg-stone-900 text-white"
+                    : "border-stone-300 bg-white text-stone-700 hover:bg-stone-100"
+                }`}
+              >
+                {t.label}
+              </button>
+            );
+          })}
+        </div>
+      </Field>
+      <Field
+        label="Artwork theme (optional)"
+        hint="Recurring imagery the illustrations should draw on, in your own words"
+        error={errors.artworkTheme}
+      >
+        <TextArea
+          rows={2}
+          value={form.artworkTheme ?? ""}
+          onChange={(e) => update({ artworkTheme: e.target.value })}
+          placeholder="e.g. Wildflowers, mountains, sunrise, open Bible, small churches, doves, olive branches, flowing rivers, stars and botanical elements"
+        />
+      </Field>
+      {sectionBible}
     </Card>
   );
 
@@ -382,6 +550,143 @@ export function BookSetupForm({
           ))}
         </Select>
       </Field>
+      <Field label="Book colouring style" error={errors.colouringMode}>
+        <div className="flex flex-wrap gap-2">
+          {(
+            [
+              ["standard", "Standard colouring"],
+              ["colour_by_numbers", "Colour by Numbers"],
+              ["mixed", "Mixed book"],
+            ] as const
+          ).map(([id, label]) => (
+            <button
+              key={id}
+              type="button"
+              aria-pressed={form.colouringMode === id}
+              onClick={() => update({ colouringMode: id })}
+              className={`rounded-lg border px-4 py-2 text-sm font-semibold transition-colors ${
+                form.colouringMode === id
+                  ? "border-stone-900 bg-stone-900 text-white"
+                  : "border-stone-300 bg-white text-stone-700 hover:bg-stone-100"
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+      </Field>
+      {form.colouringMode !== "standard" && (
+        <div className="space-y-3 rounded-xl border border-stone-200 bg-stone-50 p-4">
+          <h3 className="text-sm font-semibold text-stone-900">Colour by Numbers settings</h3>
+          {form.colouringMode === "mixed" && (
+            <Field
+              label="Colour by Numbers pages"
+              hint={`Out of ${form.numberOfDesigns} total — the remaining ${Math.max(0, form.numberOfDesigns - Math.min(cbn.cbnPageCount, form.numberOfDesigns))} are standard colouring pages`}
+            >
+              <input
+                type="number"
+                min={0}
+                max={form.numberOfDesigns}
+                value={Math.min(cbn.cbnPageCount, form.numberOfDesigns)}
+                onChange={(e) =>
+                  setCbn({
+                    cbnPageCount: Math.max(0, Math.min(form.numberOfDesigns, Number(e.target.value))),
+                  })
+                }
+                className="w-24 rounded-lg border border-stone-300 px-3 py-2 text-sm focus:border-stone-500 focus:outline-none"
+              />
+            </Field>
+          )}
+          <div className="grid gap-3 sm:grid-cols-3">
+            <Field label="Difficulty" hint="Controls region size and count">
+              <Select value={cbn.difficulty} onChange={(e) => setCbn({ difficulty: e.target.value })}>
+                {CBN_DIFFICULTIES.map((d) => (
+                  <option key={d.id} value={d.id}>{d.label}</option>
+                ))}
+              </Select>
+            </Field>
+            <Field label="Number of colours">
+              <Select
+                value={String(cbn.colourCount)}
+                onChange={(e) => setCbn({ colourCount: Number(e.target.value) })}
+              >
+                {CBN_COLOUR_COUNTS.map((n) => (
+                  <option key={n} value={n}>{n} colours</option>
+                ))}
+              </Select>
+            </Field>
+            <Field label="Colour key">
+              <Select value={cbn.keyPlacement} onChange={(e) => setCbn({ keyPlacement: e.target.value })}>
+                {CBN_KEY_PLACEMENTS.map((k) => (
+                  <option key={k.id} value={k.id}>{k.label}</option>
+                ))}
+              </Select>
+            </Field>
+          </div>
+          <Field label="Palette">
+            <div className="flex gap-2">
+              {(
+                [
+                  ["ai", "AI chooses per page"],
+                  ["custom", "Custom palette"],
+                ] as const
+              ).map(([id, label]) => (
+                <button
+                  key={id}
+                  type="button"
+                  aria-pressed={cbn.paletteMode === id}
+                  onClick={() =>
+                    setCbn({
+                      paletteMode: id,
+                      ...(id === "custom" && cbn.customPalette.length === 0
+                        ? { customPalette: DEFAULT_CBN_PALETTE.slice(0, cbn.colourCount) }
+                        : {}),
+                    })
+                  }
+                  className={`rounded-lg border px-3 py-1.5 text-xs font-semibold transition-colors ${
+                    cbn.paletteMode === id
+                      ? "border-stone-900 bg-stone-900 text-white"
+                      : "border-stone-300 bg-white text-stone-700 hover:bg-stone-100"
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          </Field>
+          {cbn.paletteMode === "custom" && (
+            <div className="grid gap-2 sm:grid-cols-2">
+              {Array.from({ length: cbn.colourCount }, (_, i) => {
+                const entry = cbn.customPalette[i] ?? DEFAULT_CBN_PALETTE[i % DEFAULT_CBN_PALETTE.length];
+                const setEntry = (patch: Partial<{ name: string; hex: string }>) => {
+                  const next = Array.from({ length: cbn.colourCount }, (_, j) =>
+                    cbn.customPalette[j] ?? DEFAULT_CBN_PALETTE[j % DEFAULT_CBN_PALETTE.length],
+                  );
+                  next[i] = { ...next[i], ...patch };
+                  setCbn({ customPalette: next });
+                };
+                return (
+                  <div key={i} className="flex items-center gap-2">
+                    <span className="w-6 text-right text-xs font-bold text-stone-500">{i + 1}</span>
+                    <input
+                      type="color"
+                      value={entry.hex}
+                      onChange={(e) => setEntry({ hex: e.target.value })}
+                      className="h-8 w-10 cursor-pointer rounded border border-stone-300"
+                    />
+                    <TextInput value={entry.name} onChange={(e) => setEntry({ name: e.target.value })} />
+                  </div>
+                );
+              })}
+            </div>
+          )}
+          <p className="text-xs text-stone-500">
+            Colour-by-numbers artwork is generated as clean enclosed regions;
+            the numbers and colour key are added programmatically and
+            validated, never left to the image AI.
+          </p>
+        </div>
+      )}
     </Card>
   );
 
@@ -528,6 +833,9 @@ export function BookSetupForm({
             <span className="text-red-600">Autosave failed — check your connection</span>
           )}
         </div>
+        {project && (
+          <BookConceptCard projectId={project.id} initialConcept={project.bookConcept} />
+        )}
         {sections.map((s, i) => (
           <div key={i}>{s}</div>
         ))}

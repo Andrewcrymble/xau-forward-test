@@ -139,6 +139,27 @@ export function BookPlanEditor({
     });
   };
 
+  const duplicatePage = async (pageId: string) => {
+    await run(async () => {
+      await api<PageDto>(`/api/pages/${pageId}/duplicate`, { method: "POST" });
+      const fresh = await api<PageDto[]>(`/api/projects/${project.id}/pages`);
+      setPages(fresh);
+    });
+  };
+
+  const convertPage = async (
+    pageId: string,
+    pageType: "standard" | "colour_by_numbers",
+  ) => {
+    await run(async () => {
+      const updated = await api<PageDto>(`/api/pages/${pageId}/convert`, {
+        method: "POST",
+        body: JSON.stringify({ pageType }),
+      });
+      setPages((prev) => prev.map((p) => (p.id === pageId ? updated : p)));
+    });
+  };
+
   const addPage = () =>
     run(async () => {
       const page = await api<PageDto>(`/api/projects/${project.id}/pages`, {
@@ -174,10 +195,19 @@ export function BookPlanEditor({
     </p>
   );
 
+  const conceptTip = !project.bookConcept && (
+    <p className="rounded-lg border border-sky-200 bg-sky-50 px-4 py-3 text-sm text-sky-800">
+      Tip: build your <strong>book concept</strong> on the Setup tab first —
+      the creative brief and style profile make the plan and artwork far more
+      cohesive.
+    </p>
+  );
+
   if (pages.length === 0) {
     return (
       <div className="space-y-4">
         {providerNotice}
+        {conceptTip}
         {error && (
           <p className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
             {error}
@@ -199,6 +229,7 @@ export function BookPlanEditor({
   return (
     <div className="space-y-4">
       {providerNotice}
+      {conceptTip}
 
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
@@ -261,6 +292,8 @@ export function BookPlanEditor({
             onMove={movePage}
             onReplace={replacePage}
             onDelete={deletePage}
+            onDuplicate={duplicatePage}
+            onConvert={convertPage}
           />
         ))}
       </div>
