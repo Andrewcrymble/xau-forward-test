@@ -6,9 +6,38 @@
 // Guides (trim, safe area, spine, barcode) are PREVIEW-ONLY — the exported
 // PDF never contains them.
 
-import { useEffect, useRef, useState } from "react";
-import type { CoverDto } from "@/lib/types";
+import { useEffect, useRef, useState, type CSSProperties } from "react";
+import type { CoverDto, CoverSettings } from "@/lib/types";
 import { BARCODE_AREA, COVER_SAFE_MARGIN_IN } from "@/lib/config/kdp-spec";
+
+function hexToRgba(hex: string, alpha: number): string {
+  const n = parseInt((/^#[0-9a-fA-F]{6}$/.test(hex) ? hex : "#000000").slice(1), 16);
+  return `rgba(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255}, ${alpha})`;
+}
+
+/** CSS mirror of the PDF's outline / drop-shadow text treatments. */
+function effectCss(
+  effect: CoverSettings["textEffect"],
+  colour: string,
+  fontSizePx: number,
+): CSSProperties {
+  if (effect === "outline") {
+    const o = Math.max(1, fontSizePx * 0.028);
+    const c = hexToRgba(colour, 1);
+    return {
+      textShadow: [
+        `${-o}px 0 ${c}`, `${o}px 0 ${c}`, `0 ${-o}px ${c}`, `0 ${o}px ${c}`,
+        `${-o}px ${-o}px ${c}`, `${-o}px ${o}px ${c}`,
+        `${o}px ${-o}px ${c}`, `${o}px ${o}px ${c}`,
+      ].join(", "),
+    };
+  }
+  if (effect === "shadow") {
+    const d = Math.max(1, fontSizePx * 0.055);
+    return { textShadow: `${d}px ${d}px ${d}px ${hexToRgba(colour, 0.6)}` };
+  }
+  return {};
+}
 
 export function CoverPreview({
   cover,
@@ -42,8 +71,14 @@ export function CoverPreview({
   const frontX = dims.bleedIn + panelW + dims.spineIn;
   const safe = COVER_SAFE_MARGIN_IN;
 
-  const textColor = settings.textColor === "black" ? "#111" : "#fff";
+  const textColor = /^#/.test(settings.textColor)
+    ? settings.textColor
+    : settings.textColor === "black" ? "#111111" : "#ffffff";
+  const plate = settings.textEffect === "plate";
+  const plateBg = plate ? hexToRgba(settings.effectColor, 0.72) : undefined;
   const align = settings.textAlign;
+  const alignSelf =
+    align === "left" ? "flex-start" : align === "right" ? "flex-end" : "center";
   const justify =
     settings.titlePosition === "middle"
       ? "center"
@@ -103,25 +138,44 @@ export function CoverPreview({
       >
         <div
           style={{
-            fontSize: settings.titleSize * scale,
-            lineHeight: 1.2,
-            fontWeight: 700,
-            fontFamily: settings.titleFont === "sans" ? "Arial, sans-serif" : "Georgia, serif",
+            alignSelf,
+            maxWidth: "100%",
+            ...(plate
+              ? {
+                  background: plateBg,
+                  padding: `${settings.titleSize * 0.3 * scale}px ${settings.titleSize * 0.4 * scale}px`,
+                }
+              : {}),
           }}
         >
-          {cover.title}
-        </div>
-        {cover.subtitle && (
           <div
             style={{
-              fontSize: Math.max(14, settings.titleSize * 0.42) * scale,
-              marginTop: 6 * scale,
+              fontSize: settings.titleSize * scale,
+              lineHeight: 1.2,
+              fontWeight: 700,
               fontFamily: settings.titleFont === "sans" ? "Arial, sans-serif" : "Georgia, serif",
+              ...effectCss(settings.textEffect, settings.effectColor, settings.titleSize * scale),
             }}
           >
-            {cover.subtitle}
+            {cover.title}
           </div>
-        )}
+          {cover.subtitle && (
+            <div
+              style={{
+                fontSize: Math.max(14, settings.titleSize * 0.42) * scale,
+                marginTop: 6 * scale,
+                fontFamily: settings.titleFont === "sans" ? "Arial, sans-serif" : "Georgia, serif",
+                ...effectCss(
+                  settings.textEffect,
+                  settings.effectColor,
+                  Math.max(14, settings.titleSize * 0.42) * scale,
+                ),
+              }}
+            >
+              {cover.subtitle}
+            </div>
+          )}
+        </div>
       </div>
       {cover.author && (
         <div
@@ -136,9 +190,26 @@ export function CoverPreview({
             color: textColor,
             fontSize: Math.max(13, settings.titleSize * 0.38) * scale,
             fontFamily: settings.titleFont === "sans" ? "Arial, sans-serif" : "Georgia, serif",
+            ...effectCss(
+              settings.textEffect,
+              settings.effectColor,
+              Math.max(13, settings.titleSize * 0.38) * scale,
+            ),
           }}
         >
-          {cover.author}
+          {plate ? (
+            <span
+              style={{
+                display: "inline-block",
+                background: plateBg,
+                padding: `${4 * scale}px ${10 * scale}px`,
+              }}
+            >
+              {cover.author}
+            </span>
+          ) : (
+            cover.author
+          )}
         </div>
       )}
 

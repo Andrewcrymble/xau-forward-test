@@ -251,10 +251,12 @@ export function CoverScreen({
                 </Select>
               </Field>
               <Field label="Text colour">
-                <Select value={settings.textColor} onChange={(e) => patch({}, { textColor: e.target.value as CoverSettings["textColor"] })}>
-                  <option value="white">White</option>
-                  <option value="black">Black</option>
-                </Select>
+                <input
+                  type="color"
+                  value={/^#/.test(settings.textColor) ? settings.textColor : "#ffffff"}
+                  onChange={(e) => patch({}, { textColor: e.target.value })}
+                  className="h-9 w-full cursor-pointer rounded-lg border border-stone-300"
+                />
               </Field>
               <Field label="Back/spine colour">
                 <input
@@ -262,6 +264,23 @@ export function CoverScreen({
                   value={settings.backgroundColor}
                   onChange={(e) => patch({}, { backgroundColor: e.target.value })}
                   className="h-9 w-full cursor-pointer rounded-lg border border-stone-300"
+                />
+              </Field>
+              <Field label="Text effect" hint="Makes the title readable over busy artwork">
+                <Select value={settings.textEffect} onChange={(e) => patch({}, { textEffect: e.target.value as CoverSettings["textEffect"] })}>
+                  <option value="none">None</option>
+                  <option value="outline">Outline</option>
+                  <option value="shadow">Drop shadow</option>
+                  <option value="plate">Colour panel behind text</option>
+                </Select>
+              </Field>
+              <Field label="Effect colour">
+                <input
+                  type="color"
+                  value={/^#/.test(settings.effectColor) ? settings.effectColor : "#000000"}
+                  onChange={(e) => patch({}, { effectColor: e.target.value })}
+                  disabled={settings.textEffect === "none"}
+                  className="h-9 w-full cursor-pointer rounded-lg border border-stone-300 disabled:cursor-not-allowed disabled:opacity-40"
                 />
               </Field>
             </div>

@@ -23,7 +23,15 @@ import type { CoverUpdateBody } from "@/lib/validation/cover";
 
 function parseSettings(json: string): CoverSettings {
   try {
-    return { ...DEFAULT_COVER_SETTINGS, ...JSON.parse(json) };
+    const parsed = JSON.parse(json) as Partial<CoverSettings>;
+    // Settings saved before the legibility options stored named text colours.
+    if (parsed.textColor === "white") parsed.textColor = "#ffffff";
+    else if (parsed.textColor === "black") {
+      parsed.textColor = "#111111";
+      // Dark text needs a light effect colour to stand out over artwork.
+      if (!parsed.effectColor) parsed.effectColor = "#ffffff";
+    }
+    return { ...DEFAULT_COVER_SETTINGS, ...parsed };
   } catch {
     return { ...DEFAULT_COVER_SETTINGS };
   }

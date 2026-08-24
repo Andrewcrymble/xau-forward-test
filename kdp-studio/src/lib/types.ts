@@ -123,7 +123,12 @@ export interface CoverSettings {
   titleSize: number; // points
   titlePosition: "top" | "middle" | "bottom";
   textAlign: "left" | "center" | "right";
-  textColor: "white" | "black";
+  /** Front-cover text colour (hex; legacy "white"/"black" values are migrated). */
+  textColor: string;
+  /** Legibility treatment applied to the front-cover text. */
+  textEffect: "none" | "outline" | "shadow" | "plate";
+  /** Colour of the outline / shadow / panel behind the text. */
+  effectColor: string; // hex
   /** Spine + back cover background. */
   backgroundColor: string; // hex
   /** Keep Amazon's barcode area clear on the back cover (default ON). */
@@ -140,7 +145,9 @@ export const DEFAULT_COVER_SETTINGS: CoverSettings = {
   titleSize: 42,
   titlePosition: "top",
   textAlign: "center",
-  textColor: "white",
+  textColor: "#ffffff",
+  textEffect: "outline",
+  effectColor: "#000000",
   backgroundColor: "#2f5d8a",
   barcodeAreaClear: true,
   backArtwork: false,

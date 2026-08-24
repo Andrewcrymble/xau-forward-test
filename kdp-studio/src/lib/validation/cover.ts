@@ -1,13 +1,17 @@
 import { z } from "zod";
 
+const hexColour = z.string().regex(/^#[0-9a-fA-F]{6}$/);
+
 export const coverSettingsSchema = z.object({
   paperType: z.enum(["blackWhiteWhitePaper", "blackWhiteCreamPaper", "colourWhitePaper"]),
   titleFont: z.enum(["serif", "sans"]),
   titleSize: z.number().min(18).max(96),
   titlePosition: z.enum(["top", "middle", "bottom"]),
   textAlign: z.enum(["left", "center", "right"]),
-  textColor: z.enum(["white", "black"]),
-  backgroundColor: z.string().regex(/^#[0-9a-fA-F]{6}$/),
+  textColor: hexColour,
+  textEffect: z.enum(["none", "outline", "shadow", "plate"]),
+  effectColor: hexColour,
+  backgroundColor: hexColour,
   barcodeAreaClear: z.boolean(),
   backArtwork: z.boolean(),
   artworkVersions: z.array(z.string()).max(50),

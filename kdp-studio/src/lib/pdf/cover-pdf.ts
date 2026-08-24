@@ -35,8 +35,18 @@ export interface CoverPdfInput {
 }
 
 function hexToRgb(hex: string): RGB {
+  if (!/^#[0-9a-fA-F]{6}$/.test(hex)) {
+    // Legacy named colours from settings saved before the hex picker.
+    hex = hex === "black" ? "#111111" : "#ffffff";
+  }
   const n = parseInt(hex.slice(1), 16);
   return rgb(((n >> 16) & 255) / 255, ((n >> 8) & 255) / 255, (n & 255) / 255);
+}
+
+/** Outline / drop-shadow treatment applied per line of front-cover text. */
+interface TextEffect {
+  kind: "outline" | "shadow";
+  colour: RGB;
 }
 
 function wrapText(text: string, font: PDFFont, size: number, maxWidth: number): string[] {
@@ -68,6 +78,7 @@ function drawAlignedLines(
   topY: number,
   align: CoverSettings["textAlign"],
   colour: RGB,
+  effect?: TextEffect | null,
 ): number {
   let y = topY;
   for (const line of lines) {
@@ -78,10 +89,55 @@ function drawAlignedLines(
         : align === "right"
           ? areaX + areaWidth - w
           : areaX + (areaWidth - w) / 2;
+    if (effect?.kind === "outline") {
+      // pdf-lib has no text stroke — draw the line offset in 8 directions
+      // behind the fill, the same trick the on-screen preview uses.
+      const o = Math.max(0.5, size * 0.028);
+      for (const [dx, dy] of [
+        [-o, 0], [o, 0], [0, -o], [0, o],
+        [-o, -o], [-o, o], [o, -o], [o, o],
+      ]) {
+        page.drawText(line, { x: x + dx, y: y + dy, size, font, color: effect.colour });
+      }
+    } else if (effect?.kind === "shadow") {
+      const d = Math.max(1, size * 0.055);
+      page.drawText(line, {
+        x: x + d, y: y - d, size, font, color: effect.colour, opacity: 0.6,
+      });
+    }
     page.drawText(line, { x, y, size, font, color: colour });
     y -= size * 1.25;
   }
   return y;
+}
+
+/** Semi-opaque panel drawn behind a block of text (the "plate" effect). */
+function drawPlate(
+  page: PDFPage,
+  maxLineWidth: number,
+  blockTop: number,
+  blockHeight: number,
+  areaX: number,
+  areaWidth: number,
+  align: CoverSettings["textAlign"],
+  colour: RGB,
+  pad: number,
+) {
+  const w = Math.min(maxLineWidth + 2 * pad, areaWidth + 2 * pad);
+  const x =
+    align === "left"
+      ? areaX - pad
+      : align === "right"
+        ? areaX + areaWidth - maxLineWidth - pad
+        : areaX + (areaWidth - maxLineWidth) / 2 - pad;
+  page.drawRectangle({
+    x,
+    y: blockTop - blockHeight - pad,
+    width: w,
+    height: blockHeight + 2 * pad,
+    color: colour,
+    opacity: 0.72,
+  });
 }
 
 export async function buildCoverPdf(input: CoverPdfInput): Promise<{
@@ -155,7 +211,12 @@ export async function buildCoverPdf(input: CoverPdfInput): Promise<{
     page.drawImage(image, { x: frontX, y: 0, width: artW, height: artH });
   }
 
-  const textColour = input.settings.textColor === "black" ? rgb(0.05, 0.05, 0.05) : rgb(1, 1, 1);
+  const textColour = hexToRgb(input.settings.textColor);
+  const effectColour = hexToRgb(input.settings.effectColor);
+  const effect: TextEffect | null =
+    input.settings.textEffect === "outline" || input.settings.textEffect === "shadow"
+      ? { kind: input.settings.textEffect, colour: effectColour }
+      : null;
 
   // --- Front cover typography --------------------------------------------
   const frontSafeX = frontX + safe;
@@ -185,24 +246,53 @@ export async function buildCoverPdf(input: CoverPdfInput): Promise<{
       titleTopY = topEdge - titleSize;
   }
 
+  if (input.settings.textEffect === "plate") {
+    // Panel behind the whole title + subtitle block, sized from the actual
+    // baselines: cap-top of the first title line to descender of the last line.
+    const maxLineWidth = Math.max(
+      ...titleLines.map((l) => displayBold.widthOfTextAtSize(l, titleSize)),
+      ...subtitleLines.map((l) => display.widthOfTextAtSize(l, subtitleSize)),
+    );
+    const plateTop = titleTopY + titleSize * 0.75;
+    const lastBaseline =
+      subtitleLines.length > 0
+        ? titleTopY -
+          titleLines.length * titleSize * 1.25 -
+          10 -
+          (subtitleLines.length - 1) * subtitleSize * 1.25
+        : titleTopY - (titleLines.length - 1) * titleSize * 1.25;
+    const plateBottom =
+      lastBaseline - (subtitleLines.length > 0 ? subtitleSize : titleSize) * 0.28;
+    drawPlate(
+      page, maxLineWidth, plateTop, plateTop - plateBottom,
+      frontSafeX, frontSafeW, input.settings.textAlign, effectColour, titleSize * 0.4,
+    );
+  }
   let y = drawAlignedLines(
     page, titleLines, displayBold, titleSize,
-    frontSafeX, frontSafeW, titleTopY, input.settings.textAlign, textColour,
+    frontSafeX, frontSafeW, titleTopY, input.settings.textAlign, textColour, effect,
   );
   if (subtitleLines.length > 0) {
     y -= 10;
     drawAlignedLines(
       page, subtitleLines, display, subtitleSize,
-      frontSafeX, frontSafeW, y, input.settings.textAlign, textColour,
+      frontSafeX, frontSafeW, y, input.settings.textAlign, textColour, effect,
     );
   }
   if (input.author) {
     // Author anchors opposite the title block.
     const authorY =
       input.settings.titlePosition === "bottom" ? topEdge - authorSize : bottomEdge + authorSize;
+    if (input.settings.textEffect === "plate") {
+      drawPlate(
+        page, display.widthOfTextAtSize(input.author, authorSize),
+        authorY + authorSize * 0.8, authorSize,
+        frontSafeX, frontSafeW, input.settings.textAlign, effectColour, authorSize * 0.35,
+      );
+    }
     drawAlignedLines(
       page, [input.author], display, authorSize,
-      frontSafeX, frontSafeW, authorY, input.settings.textAlign, textColour,
+      frontSafeX, frontSafeW, authorY, input.settings.textAlign, textColour, effect,
     );
   }
 
