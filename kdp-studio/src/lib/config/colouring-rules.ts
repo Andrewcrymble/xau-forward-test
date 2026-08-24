@@ -74,6 +74,49 @@ function styleProfileSection(p: BookStyleProfile): string {
     .join("\n");
 }
 
+export interface CbnPromptContext {
+  pageConcept: string;
+  styleInstruction: string;
+  audienceDescription: string;
+  /** Difficulty prompt text, e.g. "large clear enclosed shapes, ~20-35 regions". */
+  difficultyInstruction: string;
+  colourCount: number;
+  /** Palette to use, when the book uses a custom palette. */
+  paletteDescription?: string | null;
+  creativeBrief?: string | null;
+  styleProfile?: BookStyleProfile | null;
+}
+
+/**
+ * Prompt for the colour-by-numbers BASE artwork: a flat-colour illustration
+ * with clean enclosed shapes. The numbers, outlines and colour key are added
+ * PROGRAMMATICALLY afterwards — the image AI must never draw numbers.
+ */
+export function buildCbnArtworkPrompt(ctx: CbnPromptContext): string {
+  const sections: string[] = [
+    `Flat colour illustration for a colour-by-numbers colouring page: ${ctx.pageConcept}`,
+    `Illustration style: ${ctx.styleInstruction}. Target audience: ${ctx.audienceDescription}.`,
+    [
+      "COLOUR-BY-NUMBERS ARTWORK RULES:",
+      `- Built entirely from clearly separated FLAT solid-colour shapes — like a paint-by-numbers template or cut-paper collage.`,
+      `- Use exactly ${ctx.colourCount} distinct flat colours${ctx.paletteDescription ? ` from this palette: ${ctx.paletteDescription}` : ""}.`,
+      `- ${ctx.difficultyInstruction}.`,
+      "- Every shape is a clean enclosed area with crisp edges; no ambiguous boundaries.",
+      "- NO gradients, NO shading, NO texture, NO outlines drawn around shapes, NO tiny slivers.",
+      "- NO numbers, NO letters, NO text, NO labels anywhere — numbering is added separately.",
+      "- Plain white background around the illustration; generous white margin on all edges.",
+    ].join("\n"),
+  ];
+  if (ctx.creativeBrief?.trim()) {
+    sections.push(`CREATIVE BRIEF for the whole book:\n${ctx.creativeBrief.trim()}`);
+  }
+  if (ctx.styleProfile) {
+    sections.push(styleProfileSection(ctx.styleProfile));
+  }
+  sections.push(COLOURING_PAGE_FORMAT_INSTRUCTION);
+  return sections.join("\n\n");
+}
+
 /**
  * Composes a complete image-generation prompt for one colouring page:
  * master rules + project style + book style profile + audience + page

@@ -183,8 +183,9 @@ export interface ImageGenerationRequest {
   /** Seed hint for deterministic placeholder providers (page number). */
   seed?: number;
   /** Placeholder providers render differently per variant; real providers
-   *  rely on the prompt alone. */
-  variant?: "line-art" | "cover";
+   *  rely on the prompt alone. "cbn-flat" is the flat-colour base artwork
+   *  for colour-by-numbers pages. */
+  variant?: "line-art" | "cover" | "cbn-flat";
 }
 
 export interface GeneratedImage {

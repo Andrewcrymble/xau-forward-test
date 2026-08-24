@@ -119,6 +119,50 @@ export function PageViewModal({
           </div>
 
           <div className="space-y-4">
+            {page.pageType === "colour_by_numbers" && (
+              <div className="rounded-lg border border-sky-200 bg-sky-50 px-3 py-2">
+                <p className="text-xs font-semibold text-sky-800">
+                  Colour by Numbers
+                  {page.cbnData
+                    ? ` — ${page.cbnData.regions.length} regions, ${page.cbnData.palette.length} colours`
+                    : ""}
+                </p>
+                {page.cbnData && (
+                  <div className="mt-1.5 flex flex-wrap gap-1.5">
+                    {page.cbnData.palette.map((p) => (
+                      <span
+                        key={p.number}
+                        className="inline-flex items-center gap-1 rounded-full bg-white px-2 py-0.5 text-[11px] text-stone-700"
+                      >
+                        <span
+                          className="inline-block h-3 w-3 rounded-full border border-stone-300"
+                          style={{ background: p.hex }}
+                        />
+                        {p.number} = {p.name}
+                      </span>
+                    ))}
+                  </div>
+                )}
+                {page.completedReference && (
+                  <a
+                    href={page.completedReference}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="mt-2 block"
+                    title="Open the completed reference full size"
+                  >
+                    <img
+                      src={page.completedReference}
+                      alt="Completed colour reference"
+                      className="max-h-40 w-auto rounded-lg border border-stone-200"
+                    />
+                    <span className="mt-1 block text-[11px] text-sky-700 underline">
+                      Completed reference — matches the numbered page exactly
+                    </span>
+                  </a>
+                )}
+              </div>
+            )}
             {page.validationIssues && (
               <div className="rounded-lg border border-orange-200 bg-orange-50 px-3 py-2">
                 <p className="text-xs font-semibold text-orange-800">

@@ -53,6 +53,11 @@ export function PageImageCard({
         className="relative block aspect-[8.5/11] w-full bg-stone-50"
         title={hasImage ? "View full size" : undefined}
       >
+        {page.pageType === "colour_by_numbers" && (
+          <span className="absolute left-1.5 top-1.5 z-10 rounded-full bg-sky-600/90 px-2 py-0.5 text-[10px] font-semibold text-white">
+            Colour by Numbers
+          </span>
+        )}
         {hasImage ? (
           <img
             src={page.processedImage!}

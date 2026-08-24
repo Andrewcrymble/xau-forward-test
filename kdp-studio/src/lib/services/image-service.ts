@@ -1,10 +1,20 @@
 import sharp from "sharp";
+import type { ColouringPage, Project } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { getImageProvider } from "@/lib/ai";
+import type { GeneratedImage } from "@/lib/ai/types";
 import { getImageStorage } from "@/lib/storage";
 import { normaliseToPrintCanvas } from "@/lib/images/normalise";
+import { processColourByNumbers } from "@/lib/images/colour-by-numbers";
+import { buildCbnArtworkPrompt } from "@/lib/config/colouring-rules";
+import {
+  CBN_DIFFICULTIES,
+  audiencePromptText,
+  stylePromptText,
+} from "@/lib/config/book-options";
 import { PageServiceError } from "@/lib/services/page-service";
-import type { PageDto } from "@/lib/types";
+import { parseBookConcept } from "@/lib/services/project-service";
+import { DEFAULT_CBN_SETTINGS, type CbnSettings, type PageDto } from "@/lib/types";
 
 // One call = one page = one provider request. The client-side queue fans
 // these out with bounded concurrency, so each call stays well inside a
@@ -99,16 +109,43 @@ export async function generatePageImage(pageId: string): Promise<PageDto> {
   });
 
   try {
+    const isCbn = page.pageType === "colour_by_numbers";
+    // CBN pages generate flat-colour base artwork from a dedicated prompt
+    // (stored back to the page for transparency unless the user owns it).
+    let prompt = page.prompt;
+    let cbnSettings: CbnSettings | null = null;
+    if (isCbn) {
+      cbnSettings = parseCbnSettings(page.project.cbnSettings);
+      if (!page.promptEdited) {
+        prompt = buildCbnPromptForPage(page, page.project, cbnSettings);
+        await prisma.colouringPage.update({
+          where: { id: pageId },
+          data: { prompt },
+        });
+      }
+    }
+
     const provider = getImageProvider();
     const image = await provider.generateImage({
-      prompt: page.prompt,
+      prompt,
       seed: page.pageNumber,
+      variant: isCbn ? "cbn-flat" : "line-art",
     });
 
     const storage = getImageStorage();
     const versionNumber =
       (await prisma.imageVersion.count({ where: { pageId } })) + 1;
     const keyBase = `projects/${page.projectId}/pages/${page.id}/v${versionNumber}`;
+
+    if (isCbn && cbnSettings) {
+      return await finishCbnGeneration({
+        page,
+        image,
+        cbnSettings,
+        keyBase,
+        wasApproved,
+      });
+    }
 
     // Re-encode the original as palette PNG — visually lossless for line
     // art and far smaller, which matters on storage quotas.
@@ -278,5 +315,142 @@ export async function reviewPage(
     where: { id: pageId },
     data,
   });
+  return pageToDto(updated);
+}
+
+// ---------------------------------------------------------------------------
+// Colour-by-numbers generation
+// ---------------------------------------------------------------------------
+
+function parseCbnSettings(json: string): CbnSettings {
+  try {
+    return { ...DEFAULT_CBN_SETTINGS, ...JSON.parse(json || "{}") };
+  } catch {
+    return { ...DEFAULT_CBN_SETTINGS };
+  }
+}
+
+type PageWithProject = ColouringPage & { project: Project };
+
+function buildCbnPromptForPage(
+  page: PageWithProject,
+  project: Project,
+  settings: CbnSettings,
+): string {
+  const concept = parseBookConcept(project.bookConcept);
+  const difficulty =
+    CBN_DIFFICULTIES.find((d) => d.id === settings.difficulty)?.promptText ??
+    "clear enclosed shapes";
+  return buildCbnArtworkPrompt({
+    pageConcept: page.concept,
+    styleInstruction: stylePromptText(project.style, project.customStyle),
+    audienceDescription: audiencePromptText(
+      project.targetAudience,
+      project.customAudience,
+    ),
+    difficultyInstruction: difficulty,
+    colourCount: settings.colourCount,
+    paletteDescription:
+      settings.paletteMode === "custom" && settings.customPalette.length > 0
+        ? settings.customPalette.map((c) => c.name).join(", ")
+        : null,
+    creativeBrief: concept?.creativeBrief ?? null,
+    styleProfile: concept?.styleProfile ?? null,
+  });
+}
+
+async function finishCbnGeneration(args: {
+  page: PageWithProject;
+  image: GeneratedImage;
+  cbnSettings: CbnSettings;
+  keyBase: string;
+  wasApproved: boolean;
+}): Promise<PageDto> {
+  const { page, image, cbnSettings, keyBase, wasApproved } = args;
+  const storage = getImageStorage();
+
+  const originalUrl = await storage.put(
+    `${keyBase}-original.png`,
+    await sharp(image.data).png({ compressionLevel: 9, palette: true }).toBuffer(),
+    "image/png",
+  );
+
+  // Programmatic pipeline: quantise → segment → merge → outline → number →
+  // key → completed reference → validate. Numbers are NEVER left to the AI.
+  const result = await processColourByNumbers({
+    image: image.data,
+    difficulty: cbnSettings.difficulty,
+    colourCount: cbnSettings.colourCount,
+    customPalette:
+      cbnSettings.paletteMode === "custom" ? cbnSettings.customPalette : null,
+    keyPlacement: cbnSettings.keyPlacement,
+  });
+
+  const processedUrl = await storage.put(
+    `${keyBase}-print.png`,
+    result.numberedPage,
+    "image/png",
+  );
+  const referenceUrl = await storage.put(
+    `${keyBase}-reference.png`,
+    result.reference,
+    "image/png",
+  );
+
+  const versionNumber = Number(keyBase.match(/v(\d+)$/)?.[1] ?? "1");
+  await prisma.imageVersion.create({
+    data: {
+      pageId: page.id,
+      versionNumber,
+      originalImage: originalUrl,
+      processedImage: processedUrl,
+    },
+  });
+
+  const failed = result.validation.some((v) => v.includes("regenerate"));
+  const status = failed
+    ? "failed"
+    : result.validation.length > 0
+      ? "needs_review"
+      : "ready_for_review";
+  const cbnData = {
+    palette: result.palette,
+    regions: result.regions,
+    difficulty: cbnSettings.difficulty,
+    validation: result.validation,
+  };
+
+  const updated = await prisma.colouringPage.update({
+    where: { id: page.id },
+    data: wasApproved
+      ? { generationStatus: "approved" }
+      : {
+          originalImage: originalUrl,
+          processedImage: processedUrl,
+          completedReference: referenceUrl,
+          cbnData: JSON.stringify(cbnData),
+          generationStatus: status,
+          validationStatus: failed
+            ? "failed"
+            : result.validation.length > 0
+              ? "needs_review"
+              : "passed",
+          validationIssues:
+            result.validation.length > 0 ? result.validation.join("\n") : null,
+        },
+  });
+
+  await prisma.generationLog.create({
+    data: {
+      projectId: page.projectId,
+      kind: "page_image",
+      provider: image.provider,
+      model: image.model,
+      estimatedCost: image.estimatedCost ?? null,
+      imageCount: 1,
+      message: `Page ${page.pageNumber} v${versionNumber} (colour by numbers, ${result.regions.length} regions, ${result.palette.length} colours): ${status}`,
+    },
+  });
+
   return pageToDto(updated);
 }

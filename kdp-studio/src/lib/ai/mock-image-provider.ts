@@ -84,6 +84,38 @@ function coverPlaceholderSvg(seed: number): string {
 </svg>`;
 }
 
+/** Flat-colour placeholder for colour-by-numbers base artwork: big solid
+ *  shapes (sky band, hills, sun, tree, flowers) that quantise and segment
+ *  cleanly, so the whole CBN pipeline can run without an API key. */
+function cbnPlaceholderSvg(seed: number): string {
+  const rand = mulberry32(seed * 31337 + 3);
+  const hue = Math.floor(rand() * 360);
+  const flower = (cx: number, cy: number, r: number, h: number) =>
+    `<circle cx="${cx}" cy="${cy}" r="${r}" fill="hsl(${h} 75% 60%)"/>` +
+    `<circle cx="${cx}" cy="${cy}" r="${(r * 0.45).toFixed(0)}" fill="hsl(${(h + 160) % 360} 80% 55%)"/>`;
+  const flowers: string[] = [];
+  for (let i = 0; i < 5; i++) {
+    flowers.push(
+      flower(
+        Math.round(180 + rand() * (W - 360)),
+        Math.round(H - 320 - rand() * 160),
+        Math.round(46 + rand() * 30),
+        Math.floor(rand() * 360),
+      ),
+    );
+  }
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">
+  <rect width="${W}" height="${H}" fill="white"/>
+  <rect x="90" y="120" width="${W - 180}" height="620" fill="hsl(${(hue + 200) % 360} 70% 72%)"/>
+  <circle cx="${Math.round(W * 0.7)}" cy="300" r="120" fill="hsl(48 90% 60%)"/>
+  <path d="M 90 740 Q ${W / 2} 480 ${W - 90} 740 L ${W - 90} 980 L 90 980 Z" fill="hsl(${(hue + 100) % 360} 55% 55%)"/>
+  <rect x="90" y="980" width="${W - 180}" height="${H - 1120}" fill="hsl(${(hue + 130) % 360} 50% 45%)"/>
+  <rect x="${Math.round(W * 0.22)}" y="700" width="70" height="240" fill="hsl(25 45% 40%)"/>
+  <circle cx="${Math.round(W * 0.25)}" cy="620" r="150" fill="hsl(${(hue + 130) % 360} 60% 38%)"/>
+  ${flowers.join("\n  ")}
+</svg>`;
+}
+
 export class MockImageProvider implements ImageAIProvider {
   readonly name = "mock";
 
@@ -93,7 +125,9 @@ export class MockImageProvider implements ImageAIProvider {
     const svg =
       req.variant === "cover"
         ? coverPlaceholderSvg(req.seed ?? 1)
-        : placeholderSvg(req.seed ?? 1);
+        : req.variant === "cbn-flat"
+          ? cbnPlaceholderSvg(req.seed ?? 1)
+          : placeholderSvg(req.seed ?? 1);
     const data = await sharp(Buffer.from(svg)).png().toBuffer();
     return {
       data,
