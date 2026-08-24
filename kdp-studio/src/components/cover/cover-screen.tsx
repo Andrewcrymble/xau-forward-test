@@ -266,6 +266,12 @@ export function CoverScreen({
               </Field>
             </div>
             <Checkbox
+              label="Use artwork on back cover"
+              hint="Carries the front artwork across the back, darkened so text stays readable"
+              checked={settings.backArtwork}
+              onChange={(e) => patch({}, { backArtwork: e.target.checked })}
+            />
+            <Checkbox
               label="Leave barcode area clear"
               hint="Amazon prints its own barcode bottom-right on the back cover"
               checked={settings.barcodeAreaClear}

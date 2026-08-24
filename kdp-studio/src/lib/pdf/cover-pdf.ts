@@ -123,6 +123,23 @@ export async function buildCoverPdf(input: CoverPdfInput): Promise<{
   // Background colour across the whole wraparound (fills bleed too).
   page.drawRectangle({ x: 0, y: 0, width: pageW, height: pageH, color: bg });
 
+  // --- Optional back-cover artwork (darkened so text stays readable) ------
+  if (input.artwork && input.settings.backArtwork) {
+    const artW = bleed + panelW;
+    const pxW = Math.round((artW / PT) * PRINT_DPI);
+    const pxH = Math.round((pageH / PT) * PRINT_DPI);
+    const fitted = await sharp(input.artwork)
+      .resize(pxW, pxH, { fit: "cover", position: "centre" })
+      .png()
+      .toBuffer();
+    const image = await doc.embedPng(fitted);
+    page.drawImage(image, { x: 0, y: 0, width: artW, height: pageH });
+    page.drawRectangle({
+      x: 0, y: 0, width: artW, height: pageH,
+      color: rgb(0, 0, 0), opacity: 0.5,
+    });
+  }
+
   // --- Front cover artwork (extends into top/right/bottom bleed) ----------
   if (input.artwork) {
     const artW = panelW + bleed;

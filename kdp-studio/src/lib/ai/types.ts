@@ -35,6 +35,31 @@ export interface BookPlanResult {
   usage: TextUsage;
 }
 
+export interface ListingRequest {
+  bookTitle: string;
+  subtitle?: string | null;
+  author?: string | null;
+  niche: string;
+  description?: string | null;
+  audience: string;
+  style: string;
+  pageCount: number;
+  /** A sample of page titles so the copy reflects real content. */
+  pageTitles: string[];
+}
+
+export interface ListingDraft {
+  titleSuggestions: string[];
+  title: string;
+  subtitle: string;
+  description: string;
+  bulletPoints: string[];
+  keywords: string[];
+  audience: string;
+  backCoverDescription: string;
+  shortPromo: string;
+}
+
 export interface TextAIProvider {
   readonly name: string;
   /** Generate `count` unique, non-repetitive page concepts for a book. */
@@ -43,6 +68,10 @@ export interface TextAIProvider {
   generateReplacementConcept(
     req: Omit<BookPlanRequest, "count">,
   ): Promise<{ concept: PageConceptDraft; usage: TextUsage }>;
+  /** Generate complete Amazon listing copy for the book. */
+  generateListing(
+    req: ListingRequest,
+  ): Promise<{ listing: ListingDraft; usage: TextUsage }>;
 }
 
 // ---------------------------------------------------------------------------

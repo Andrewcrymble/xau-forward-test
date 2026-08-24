@@ -4,7 +4,7 @@ A web application for creating complete Amazon KDP-ready colouring books:
 book concept → page plan → AI image generation → review → print-ready
 interior PDF → wraparound cover → Amazon listing → export package.
 
-**Status: Phase 5 (Cover Builder) complete** — everything from Phase 1
+**Status: Phase 6 (Listing Generator) complete** — everything from Phase 1
 (navigation, database, project wizard, dashboard, autosaving setup), AI
 book planning (OpenAI or keyless sample provider), image generation with a
 concurrency-bounded queue, 2550×3300 print normalisation, quality checks,
@@ -14,8 +14,12 @@ print-ready book-interior.pdf with embedded fonts, plus the cover
 builder: AI front-cover artwork with versions, a typography editor with
 live wraparound preview and guides, spine width calculated from the real
 page count and paper type, cover bleed, a protected Amazon barcode area,
-and the one-page wraparound book-cover.pdf. Later phases add listing
-generation and ZIP export.
+and the one-page wraparound book-cover.pdf (with optional darkened
+artwork across the back cover), plus the Amazon listing generator:
+title suggestions, description, sales bullets, exactly seven keywords,
+audience copy, a short promo line and a back-cover description that can
+be applied to the cover in one tap — all editable with autosave. Phase 7
+adds the ZIP export package.
 
 **Hosting:** see [DEPLOY.md](./DEPLOY.md) — browser-only setup on Vercel +
 Neon Postgres, no terminal required.

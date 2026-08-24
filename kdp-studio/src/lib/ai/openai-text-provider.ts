@@ -1,6 +1,8 @@
 import type {
   BookPlanRequest,
   BookPlanResult,
+  ListingDraft,
+  ListingRequest,
   PageConceptDraft,
   TextAIProvider,
   TextUsage,
@@ -157,5 +159,98 @@ export class OpenAITextProvider implements TextAIProvider {
   async generateReplacementConcept(req: Omit<BookPlanRequest, "count">) {
     const { concepts, usage } = await this.generateBookPlan({ ...req, count: 1 });
     return { concept: concepts[0], usage };
+  }
+
+  async generateListing(
+    req: ListingRequest,
+  ): Promise<{ listing: ListingDraft; usage: TextUsage }> {
+    const system = [
+      "You are an expert Amazon KDP listing copywriter for colouring books.",
+      "Write compelling, honest sales copy. Never promise Amazon rankings, bestseller status or sales results.",
+      "Keywords are backend search terms: 2-3 words each, no punctuation, no duplicates of the title words where avoidable, exactly 7 of them.",
+      "The Amazon title must be under 200 characters; the description 600-1500 characters, written as flowing paragraphs (plain text, no markdown).",
+      "The back-cover description is 2-4 short sentences suitable for print.",
+      "The short promo is a single sentence for ads/social.",
+    ].join(" ");
+    const user = [
+      `Book title: ${req.bookTitle}`,
+      req.subtitle ? `Subtitle: ${req.subtitle}` : "",
+      req.author ? `Author: ${req.author}` : "",
+      `Niche: ${req.niche}`,
+      req.description?.trim() ? `Author notes: ${req.description.trim()}` : "",
+      `Audience: ${req.audience}`,
+      `Illustration style: ${req.style}`,
+      `Number of colouring pages: ${req.pageCount}`,
+      req.pageTitles.length > 0
+        ? `Example pages: ${req.pageTitles.slice(0, 15).join("; ")}`
+        : "",
+      "Produce: 4 title suggestions, a recommended title and subtitle, the product description, 4-6 bullet-style sales points, exactly 7 keywords, a one-sentence audience description, a back-cover description, and a short promotional sentence.",
+    ]
+      .filter(Boolean)
+      .join("\n");
+
+    const schema = {
+      name: "amazon_listing",
+      strict: true,
+      schema: {
+        type: "object",
+        additionalProperties: false,
+        properties: {
+          titleSuggestions: { type: "array", items: { type: "string" } },
+          title: { type: "string" },
+          subtitle: { type: "string" },
+          description: { type: "string" },
+          bulletPoints: { type: "array", items: { type: "string" } },
+          keywords: { type: "array", items: { type: "string" } },
+          audience: { type: "string" },
+          backCoverDescription: { type: "string" },
+          shortPromo: { type: "string" },
+        },
+        required: [
+          "titleSuggestions", "title", "subtitle", "description",
+          "bulletPoints", "keywords", "audience", "backCoverDescription", "shortPromo",
+        ],
+      },
+    };
+
+    const res = await fetch("https://api.openai.com/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${this.apiKey}`,
+      },
+      body: JSON.stringify({
+        model: this.model,
+        messages: [
+          { role: "system", content: system },
+          { role: "user", content: user },
+        ],
+        response_format: { type: "json_schema", json_schema: schema },
+      }),
+    });
+    if (!res.ok) {
+      const text = await res.text().catch(() => "");
+      throw new Error(`OpenAI request failed (${res.status}): ${text.slice(0, 300)}`);
+    }
+    const json = (await res.json()) as {
+      choices: { message: { content: string } }[];
+      usage?: ChatUsage;
+    };
+    const content = json.choices?.[0]?.message?.content;
+    if (!content) throw new Error("OpenAI returned an empty response");
+    const listing = JSON.parse(content) as ListingDraft;
+    // Enforce exactly seven keywords regardless of what the model returned.
+    listing.keywords = listing.keywords.filter(Boolean).slice(0, 7);
+    while (listing.keywords.length < 7) {
+      listing.keywords.push(`${listing.keywords.length + 1} colouring book`);
+    }
+    return {
+      listing,
+      usage: {
+        provider: this.name,
+        model: this.model,
+        tokensUsed: json.usage?.total_tokens ?? 0,
+      },
+    };
   }
 }

@@ -1,8 +1,11 @@
 import type {
   BookPlanRequest,
   BookPlanResult,
+  ListingDraft,
+  ListingRequest,
   PageConceptDraft,
   TextAIProvider,
+  TextUsage,
 } from "./types";
 
 // Built-in sample planner used when no AI provider key is configured.
@@ -63,5 +66,49 @@ export class MockTextProvider implements TextAIProvider {
   async generateReplacementConcept(req: Omit<BookPlanRequest, "count">) {
     const { concepts, usage } = await this.generateBookPlan({ ...req, count: 1 });
     return { concept: concepts[0], usage };
+  }
+
+  async generateListing(
+    req: ListingRequest,
+  ): Promise<{ listing: ListingDraft; usage: TextUsage }> {
+    const n = req.niche;
+    const listing: ListingDraft = {
+      titleSuggestions: [
+        `The Big ${n} Colouring Book`,
+        `${n}: A Colouring Adventure`,
+        `Colour Your Way Through ${n}`,
+        `${req.pageCount} ${n} Colouring Pages`,
+      ],
+      title: `${req.bookTitle} — sample listing title`,
+      subtitle: req.subtitle || `${req.pageCount} Relaxing Colouring Pages for ${req.audience}`,
+      description:
+        `SAMPLE LISTING — add an AI provider key for real copy.\n\n` +
+        `Discover ${req.pageCount} unique colouring pages celebrating ${n}. ` +
+        `Each illustration is printed single-sided on bright white paper, with a ${req.style} style crafted for ${req.audience}.`,
+      bulletPoints: [
+        `${req.pageCount} unique single-sided colouring pages`,
+        `Large 8.5 × 11 inch pages with generous margins`,
+        `Designed for ${req.audience}`,
+        "Includes a colour test page",
+        "Sample bullet — replace with real AI copy",
+      ],
+      keywords: [
+        `${n.toLowerCase()} colouring book`.slice(0, 40),
+        "colouring pages",
+        "relaxing colouring",
+        "gift colouring book",
+        "creative activity book",
+        "single sided colouring",
+        "large print colouring",
+      ],
+      audience: `Perfect for ${req.audience} who love ${n.toLowerCase()}.`,
+      backCoverDescription:
+        `${req.pageCount} beautiful ${n.toLowerCase()} colouring pages, printed single-sided for every kind of pen and pencil. Sample text — generate real copy with an AI key.`,
+      shortPromo: `Unwind with ${req.pageCount} gorgeous ${n.toLowerCase()} colouring pages.`,
+    };
+    return {
+      listing,
+      usage: { provider: this.name, model: "sample-generator", tokensUsed: 0 },
+    };
   }
 }

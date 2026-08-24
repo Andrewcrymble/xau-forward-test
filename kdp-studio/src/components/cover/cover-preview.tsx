@@ -62,6 +62,22 @@ export function CoverPreview({
         background: settings.backgroundColor,
       }}
     >
+      {/* Optional back-cover artwork, darkened for readability */}
+      {cover.artwork && settings.backArtwork && (
+        <>
+          <img
+            src={cover.artwork}
+            alt="Back cover artwork"
+            className="absolute h-full object-cover"
+            style={{ left: 0, width: pct(dims.bleedIn + panelW) }}
+          />
+          <div
+            className="absolute h-full bg-black/50"
+            style={{ left: 0, width: pct(dims.bleedIn + panelW) }}
+          />
+        </>
+      )}
+
       {/* Front artwork (fills front panel + outer bleed) */}
       {cover.artwork && (
         <img

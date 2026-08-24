@@ -51,6 +51,9 @@ model Project {
   // Interior options — JSON-encoded InteriorOptions (src/lib/types.ts)
   interiorOptions String @default("{}")
 
+  // Amazon listing content — JSON-encoded ListingContent (src/lib/types.ts)
+  listing   String?
+
   status    String   @default("setup") // ProjectStatus
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

@@ -9,6 +9,7 @@ export const coverSettingsSchema = z.object({
   textColor: z.enum(["white", "black"]),
   backgroundColor: z.string().regex(/^#[0-9a-fA-F]{6}$/),
   barcodeAreaClear: z.boolean(),
+  backArtwork: z.boolean(),
   artworkVersions: z.array(z.string()).max(50),
 });
 

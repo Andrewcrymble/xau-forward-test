@@ -128,6 +128,8 @@ export interface CoverSettings {
   backgroundColor: string; // hex
   /** Keep Amazon's barcode area clear on the back cover (default ON). */
   barcodeAreaClear: boolean;
+  /** Carry the front artwork across the back cover (darkened for text). */
+  backArtwork: boolean;
   /** All generated artwork URLs (the Cover.artwork field is the selected one). */
   artworkVersions: string[];
 }
@@ -141,8 +143,23 @@ export const DEFAULT_COVER_SETTINGS: CoverSettings = {
   textColor: "white",
   backgroundColor: "#2f5d8a",
   barcodeAreaClear: true,
+  backArtwork: false,
   artworkVersions: [],
 };
+
+/** Amazon listing content — stored JSON-encoded on Project.listing. */
+export interface ListingContent {
+  titleSuggestions: string[];
+  title: string;
+  subtitle: string;
+  description: string;
+  bulletPoints: string[];
+  /** Exactly seven backend search keywords. */
+  keywords: string[];
+  audience: string;
+  backCoverDescription: string;
+  shortPromo: string;
+}
 
 /** Cover state as exposed to the UI. */
 export interface CoverDto {
