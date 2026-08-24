@@ -1,0 +1,42 @@
+name: Generate style preview images
+
+# One-off (re)generation of the AI sample images shown on the style and
+# complexity pickers. Uses the OpenAI key from repository secrets and
+# commits the results; costs roughly $0.80 per full run at medium quality.
+
+on: workflow_dispatch
+
+permissions:
+  contents: write
+
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: kdp-studio
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: claude/kdp-colouring-book-studio-1s7szl
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Generate previews
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY || secrets.OPEN_AI_API }}
+        run: node scripts/generate-style-previews.mjs
+
+      - name: Commit previews
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add public/style-previews
+          git commit -m "Add AI-generated style preview images" || echo "nothing to commit"
+          git pull --rebase origin claude/kdp-colouring-book-studio-1s7szl
+          git push origin HEAD:claude/kdp-colouring-book-studio-1s7szl

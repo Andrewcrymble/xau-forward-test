@@ -1,6 +1,14 @@
-// Miniature line-art previews for each illustration style and complexity
-// level. Hand-drawn SVGs (white ground, black strokes) so the setup screens
-// can show what a choice looks like without any API calls.
+"use client";
+
+// Preview images for each illustration style and complexity level. Real
+// AI-generated samples (public/style-previews/*.webp, produced by the
+// "Generate style preview images" workflow with the app's own style
+// prompts) are shown when present; the hand-drawn SVG sketches below are
+// the instant fallback when a sample is missing.
+
+/* eslint-disable @next/next/no-img-element */
+
+import { useState } from "react";
 
 const FRAME = { viewBox: "0 0 120 160", className: "h-full w-full" } as const;
 
@@ -204,13 +212,44 @@ const STYLE_PREVIEWS: Record<string, () => React.ReactNode> = {
   custom: CustomStyle,
 };
 
-export function StylePreview({ styleId }: { styleId: string }) {
-  const Preview = STYLE_PREVIEWS[styleId] ?? CustomStyle;
-  return <Preview />;
+function SampleImage({
+  src,
+  fallback,
+}: {
+  src: string;
+  fallback: React.ReactNode;
+}) {
+  const [failed, setFailed] = useState(false);
+  if (failed) return <>{fallback}</>;
+  return (
+    <img
+      src={src}
+      alt=""
+      className="h-full w-full bg-white object-cover"
+      loading="lazy"
+      onError={() => setFailed(true)}
+    />
+  );
 }
 
-/** Complexity preview: the same flower drawn with increasing detail. */
+export function StylePreview({ styleId }: { styleId: string }) {
+  const Preview = STYLE_PREVIEWS[styleId] ?? CustomStyle;
+  return (
+    <SampleImage src={`/style-previews/style-${styleId}.webp`} fallback={<Preview />} />
+  );
+}
+
+/** Complexity preview: the same subject drawn with increasing detail. */
 export function ComplexityPreview({ level }: { level: number }) {
+  return (
+    <SampleImage
+      src={`/style-previews/complexity-${level}.webp`}
+      fallback={<ComplexitysSvg level={level} />}
+    />
+  );
+}
+
+function ComplexitysSvg({ level }: { level: number }) {
   // level 0..4 → petals, rings and stroke weight change together.
   const petals = [5, 6, 8, 12, 16][level] ?? 8;
   const stroke = [5, 4, 2.6, 1.6, 1][level] ?? 2.6;
