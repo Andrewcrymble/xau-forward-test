@@ -7,7 +7,10 @@
 import { useEffect, useState } from "react";
 import { Button, Card } from "@/components/ui";
 import type { ApiResponse } from "@/lib/types";
-import type { CleanupResult } from "@/lib/services/maintenance-service";
+import type {
+  CleanupResult,
+  RecompressResult,
+} from "@/lib/services/maintenance-service";
 
 function fmtBytes(n: number): string {
   if (n >= 1024 * 1024 * 1024) return `${(n / 1024 / 1024 / 1024).toFixed(2)} GB`;
@@ -30,6 +33,9 @@ export function StorageCard() {
       .catch(() => {});
   }, []);
 
+  const [compressing, setCompressing] = useState(false);
+  const [compressResult, setCompressResult] = useState<RecompressResult | null>(null);
+
   const cleanup = async () => {
     setRunning(true);
     setError(null);
@@ -47,6 +53,29 @@ export function StorageCard() {
     }
   };
 
+  const recompress = async () => {
+    setCompressing(true);
+    setError(null);
+    setCompressResult(null);
+    try {
+      const res = await fetch("/api/maintenance/storage", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "recompress" }),
+      });
+      const json: ApiResponse<RecompressResult> = await res.json();
+      if (!json.ok) throw new Error(json.error);
+      setCompressResult(json.data);
+      setUsage((u) =>
+        u ? { ...u, totalBytes: json.data.totalBytes } : { totalFiles: 0, totalBytes: json.data.totalBytes },
+      );
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Compression failed");
+    } finally {
+      setCompressing(false);
+    }
+  };
+
   return (
     <Card className="space-y-3">
       <h2 className="text-base font-semibold text-stone-900">Storage</h2>
@@ -58,16 +87,38 @@ export function StorageCard() {
         by deleted books and pages. Current artwork, approved images and their
         version history are never touched.
       </p>
-      <Button onClick={cleanup} disabled={running}>
-        {running ? "Cleaning up…" : "Free up storage"}
-      </Button>
+      <div className="flex flex-wrap gap-2">
+        <Button onClick={cleanup} disabled={running || compressing}>
+          {running ? "Cleaning up…" : "Free up storage"}
+        </Button>
+        <Button variant="secondary" onClick={recompress} disabled={running || compressing}>
+          {compressing ? "Compressing…" : "Compress existing images"}
+        </Button>
+      </div>
       {result && (
         <p className="text-sm text-emerald-700">
           Freed {fmtBytes(result.bytesFreed)} — deleted {result.filesDeleted} orphaned files and{" "}
           {result.exportsPruned} old builds. Now using {fmtBytes(result.totalBytes)}.
         </p>
       )}
+      {compressResult && (
+        <p className="text-sm text-emerald-700">
+          Recompressed {compressResult.shrunk} of {compressResult.processed} images, saving{" "}
+          {fmtBytes(compressResult.bytesSaved)}. Now using {fmtBytes(compressResult.totalBytes)}.
+          {compressResult.remaining > 0 && (
+            <span className="block font-semibold">
+              {compressResult.remaining} images still to process — tap
+              &quot;Compress existing images&quot; again to continue.
+            </span>
+          )}
+        </p>
+      )}
       {error && <p className="text-sm text-red-600">{error}</p>}
+      <p className="text-xs text-stone-500">
+        &quot;Compress existing images&quot; shrinks artwork saved before
+        compressed storage shipped (typically 60-80% smaller, no visible
+        quality change, same links). Large libraries take a few runs.
+      </p>
       <p className="text-xs text-stone-400">
         Hosted storage (Vercel Blob) has a 1 GB limit on the free plan. If
         cleanup does not free enough, delete finished projects you no longer

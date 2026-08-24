@@ -142,3 +142,70 @@ export async function storageUsage(): Promise<{ totalFiles: number; totalBytes: 
     totalBytes: stored.reduce((s, f) => s + f.sizeBytes, 0),
   };
 }
+
+export interface RecompressResult {
+  processed: number;
+  shrunk: number;
+  bytesSaved: number;
+  /** PNGs still worth trying — run again while > 0. */
+  remaining: number;
+  totalBytes: number;
+}
+
+/** Anything under this is already small enough to leave alone. */
+const RECOMPRESS_MIN_BYTES = 300 * 1024;
+/** Stay safely inside the serverless time limit; callers re-run for the rest. */
+const RECOMPRESS_BUDGET_MS = 220_000;
+
+/**
+ * Re-encode stored page/cover PNGs as palette PNGs at max compression —
+ * visually lossless for line art and typically 60-80% smaller. Files keep
+ * their key (and therefore their URL), so no database rows change. Books
+ * saved before compressed storage shipped are the big win here.
+ */
+export async function recompressImages(): Promise<RecompressResult> {
+  const sharp = (await import("sharp")).default;
+  const storage = getImageStorage();
+  const started = Date.now();
+
+  const referenced = await referencedUrls();
+  const stored = await storage.list("projects/");
+  const candidates = stored.filter(
+    (f) =>
+      f.key.endsWith(".png") &&
+      f.sizeBytes >= RECOMPRESS_MIN_BYTES &&
+      referenced.has(f.url),
+  );
+
+  let processed = 0;
+  let shrunk = 0;
+  let bytesSaved = 0;
+  for (const file of candidates) {
+    if (Date.now() - started > RECOMPRESS_BUDGET_MS) break;
+    processed++;
+    try {
+      const bytes = await storage.readBytes(file.url);
+      const re = await sharp(bytes)
+        .png({ compressionLevel: 9, palette: true })
+        .toBuffer();
+      // Only replace on a real saving — re-encoding an already-palette PNG
+      // usually lands within a few percent and is not worth a write.
+      if (re.length < bytes.length * 0.9) {
+        await storage.put(file.key, re, "image/png");
+        shrunk++;
+        bytesSaved += bytes.length - re.length;
+      }
+    } catch {
+      // A single unreadable file must not stop the sweep.
+    }
+  }
+
+  const after = await storage.list("projects/");
+  return {
+    processed,
+    shrunk,
+    bytesSaved,
+    remaining: Math.max(0, candidates.length - processed),
+    totalBytes: after.reduce((s, f) => s + f.sizeBytes, 0),
+  };
+}
