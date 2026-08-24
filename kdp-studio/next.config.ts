@@ -8,6 +8,9 @@ const nextConfig: NextConfig = {
     "/api/projects/[id]/cover/build": ["./src/assets/fonts/**"],
     // The package builder can build both PDFs itself when none exist yet.
     "/api/projects/[id]/export/package": ["./src/assets/fonts/**"],
+    // Colour-by-numbers pages draw region numbers as SVG text — serverless
+    // ships no system fonts, so the generate route needs the bundled ones.
+    "/api/pages/[pageId]/generate": ["./src/assets/fonts/**"],
   },
 };
 
