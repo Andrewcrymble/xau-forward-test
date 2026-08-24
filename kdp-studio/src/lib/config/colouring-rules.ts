@@ -21,6 +21,8 @@ export const COLOURING_PAGE_MASTER_RULES = [
   "Never create a grid, collage, or multiple scenes or panels.",
   "Pure white background.",
   "Clean black line art only — no colour, no grey, no shading, no gradients.",
+  "Bold, smooth, continuous outlines with consistent line weight — every shape fully enclosed by clean, clearly defined, unbroken lines that are easy to colour inside.",
+  "No sketchy, scratchy, hatched, cross-hatched, stippled, dotted, broken or double lines; no pencil, charcoal or watercolour texture.",
   "No solid black backgrounds; avoid excessive solid-black filled areas.",
   "Crisp, high-resolution line work.",
   "No page numbers, captions, labels, text, logos or watermarks.",

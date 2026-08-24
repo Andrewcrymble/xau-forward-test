@@ -83,6 +83,26 @@ export async function normaliseToPrintCanvas(input: Buffer): Promise<NormaliseRe
       );
     }
 
+    // Grey-tone check: colouring pages should be near-bimodal (white paper,
+    // black lines). A large mid-tone fraction means shading/soft lines —
+    // the clean-up pass below fixes it, but heavy shading is worth a review.
+    const sample = await sharp(input)
+      .flatten({ background: "#ffffff" })
+      .greyscale()
+      .resize(200, 200, { fit: "inside" })
+      .raw()
+      .toBuffer();
+    let mid = 0;
+    for (let i = 0; i < sample.length; i++) {
+      if (sample[i] > 70 && sample[i] < 190) mid++;
+    }
+    const midFraction = mid / sample.length;
+    if (midFraction > 0.2) {
+      issues.push(
+        `Heavy grey shading detected (${Math.round(midFraction * 100)}% mid-tones) — lines were auto-cleaned to pure black on white; check the result still looks right`,
+      );
+    }
+
     // Edge whitespace: each border strip (4% of the dimension) should be
     // close to pure white so nothing touches the trim edge.
     const stripW = Math.max(1, Math.round(width * 0.04));
@@ -107,14 +127,24 @@ export async function normaliseToPrintCanvas(input: Buffer): Promise<NormaliseRe
   }
 
   // Normalise: fit inside the safe area, centred on a pure white canvas.
+  // The line-art clean-up runs AFTER the resize, at final print resolution:
+  // greyscale + a steep contrast stretch pushes near-white paper to pure
+  // white and grey/soft lines to solid black, leaving a narrow ramp so edges
+  // stay smooth. Result: clean, clearly defined lines that are easy to
+  // colour inside, whatever the model returned.
   let processed: Buffer;
   try {
+    const CLEAN_BLACK_BELOW = 96; // ≤ this → pure black
+    const CLEAN_WHITE_ABOVE = 184; // ≥ this → pure white
+    const slope = 255 / (CLEAN_WHITE_ABOVE - CLEAN_BLACK_BELOW);
     const fitted = await sharp(input)
       .flatten({ background: "#ffffff" })
       .resize(CANVAS_W - SAFE_INSET * 2, CANVAS_H - SAFE_INSET * 2, {
         fit: "inside",
         withoutEnlargement: false,
       })
+      .greyscale()
+      .linear(slope, -CLEAN_BLACK_BELOW * slope)
       .toBuffer();
     processed = await sharp({
       create: {
