@@ -24,6 +24,14 @@ export class VercelBlobStorage implements ImageStorage {
     return Buffer.from(await res.arrayBuffer());
   }
 
+  ownsUrl(url: string): boolean {
+    try {
+      return new URL(url).hostname.endsWith(".blob.vercel-storage.com");
+    } catch {
+      return false;
+    }
+  }
+
   async delete(url: string): Promise<void> {
     await del(url);
   }

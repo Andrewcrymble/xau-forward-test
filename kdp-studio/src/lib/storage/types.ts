@@ -25,4 +25,6 @@ export interface ImageStorage {
   delete(url: string): Promise<void>;
   /** List stored files under a key prefix (used by storage cleanup). */
   list(prefix: string): Promise<StoredFileInfo[]>;
+  /** Whether a stored URL belongs to this backend (used by migration). */
+  ownsUrl(url: string): boolean;
 }

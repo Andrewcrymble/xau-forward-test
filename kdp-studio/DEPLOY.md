@@ -43,6 +43,36 @@ setup:
    with no other configuration.
 4. Redeploy (Deployments → ⋯ → Redeploy) so the new variable takes effect.
 
+### Bigger free storage: Cloudflare R2 (10 GB free)
+
+Vercel Blob's free tier is 1 GB. Cloudflare R2 gives 10 GB free with no
+egress fees, and the app supports it natively. Browser-only setup:
+
+1. Create a free account at https://dash.cloudflare.com and open **R2
+   Object Storage** (it asks for a payment card for overage, but the 10 GB
+   free tier costs nothing).
+2. **Create bucket** — name it e.g. `kdp-artwork` (location: automatic).
+3. In the bucket's **Settings**, under **Public Development URL**, click
+   **Enable** and copy the URL (looks like `https://pub-xxxxxxxx.r2.dev`).
+4. Back on the R2 overview page, open **API → Manage API tokens** →
+   **Create API token**: permissions **Object Read & Write**, scoped to
+   your bucket. Copy the *Access Key ID* and *Secret Access Key*. Your
+   *Account ID* is shown on the same page (and in the dashboard URL).
+5. In your GitHub repository → Settings → Secrets and variables → Actions,
+   add five secrets:
+   - `R2_ACCOUNT_ID` — your Cloudflare account id
+   - `R2_ACCESS_KEY_ID` — from the API token
+   - `R2_SECRET_ACCESS_KEY` — from the API token
+   - `R2_BUCKET` — the bucket name, e.g. `kdp-artwork`
+   - `R2_PUBLIC_BASE_URL` — the public URL from step 3
+6. Re-run the **Deploy KDP Studio to Vercel** workflow (Actions tab →
+   Run workflow). The app now stores all new artwork in R2.
+7. Finally, open the app's **Settings → Storage** card: it shows
+   `Cloudflare R2` as the backend and a **Migrate files to current
+   storage** button — tap it (repeatedly, if it reports files remaining)
+   to move your existing books from Vercel Blob into R2, update every
+   link, and free the old Blob quota.
+
 ## 4. OpenAI image generation
 
 With `OPENAI_API_KEY` set, colouring pages generate with **gpt-image-1**

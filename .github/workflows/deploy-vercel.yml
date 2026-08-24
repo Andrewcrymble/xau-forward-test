@@ -49,6 +49,13 @@ jobs:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
           # Accept either secret name; the app itself always reads OPENAI_API_KEY
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY || secrets.OPEN_AI_API }}
+          # Optional Cloudflare R2 storage (10GB free tier). When all five are
+          # set the app stores artwork in R2 instead of Vercel Blob.
+          R2_ACCOUNT_ID: ${{ secrets.R2_ACCOUNT_ID }}
+          R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          R2_BUCKET: ${{ secrets.R2_BUCKET }}
+          R2_PUBLIC_BASE_URL: ${{ secrets.R2_PUBLIC_BASE_URL }}
         run: |
           set -e
           # Keep KDP Studio in its own Postgres schema so it can never touch
@@ -71,6 +78,11 @@ jobs:
           }
           sync_env DATABASE_URL "$DATABASE_URL"
           sync_env OPENAI_API_KEY "$OPENAI_API_KEY"
+          sync_env R2_ACCOUNT_ID "$R2_ACCOUNT_ID"
+          sync_env R2_ACCESS_KEY_ID "$R2_ACCESS_KEY_ID"
+          sync_env R2_SECRET_ACCESS_KEY "$R2_SECRET_ACCESS_KEY"
+          sync_env R2_BUCKET "$R2_BUCKET"
+          sync_env R2_PUBLIC_BASE_URL "$R2_PUBLIC_BASE_URL"
 
       - name: Ensure Blob storage for generated artwork
         continue-on-error: true

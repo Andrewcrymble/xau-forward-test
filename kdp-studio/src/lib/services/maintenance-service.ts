@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/db";
 import { getImageStorage } from "@/lib/storage";
+import { VercelBlobStorage } from "@/lib/storage/vercel-blob-storage";
 
 // Storage maintenance — keeps the app inside tight storage quotas (Vercel
 // Blob's free tier is 1GB):
@@ -134,12 +135,143 @@ export async function cleanupStorage(): Promise<CleanupResult> {
   };
 }
 
-/** Current storage usage summary. */
-export async function storageUsage(): Promise<{ totalFiles: number; totalBytes: number }> {
-  const stored = await getImageStorage().list("projects/");
+/** Current storage usage summary for the ACTIVE backend. */
+export async function storageUsage(): Promise<{
+  backend: string;
+  totalFiles: number;
+  totalBytes: number;
+  /** Referenced files still living on another backend (needs migration). */
+  foreignFiles: number;
+}> {
+  const storage = getImageStorage();
+  const stored = await storage.list("projects/");
+  const referenced = await referencedUrls();
+  let foreignFiles = 0;
+  for (const url of referenced) {
+    if (!storage.ownsUrl(url)) foreignFiles++;
+  }
   return {
+    backend: storage.name,
     totalFiles: stored.length,
     totalBytes: stored.reduce((s, f) => s + f.sizeBytes, 0),
+    foreignFiles,
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Storage migration — move every referenced file onto the active backend
+// (e.g. Vercel Blob → Cloudflare R2), rewriting database references and
+// best-effort deleting the old copy so the old quota is actually freed.
+// ---------------------------------------------------------------------------
+
+export interface MigrateResult {
+  migrated: number;
+  bytesMoved: number;
+  failed: number;
+  /** Foreign files still to move — run again while > 0. */
+  remaining: number;
+  backend: string;
+}
+
+const MIGRATE_BUDGET_MS = 220_000;
+
+function contentTypeFor(key: string): string {
+  if (key.endsWith(".png")) return "image/png";
+  if (key.endsWith(".pdf")) return "application/pdf";
+  if (key.endsWith(".zip")) return "application/zip";
+  return "application/octet-stream";
+}
+
+/** Recover the original storage key from a foreign URL. */
+function keyFromForeignUrl(url: string): string {
+  if (url.startsWith("/api/files/")) return url.slice("/api/files/".length);
+  try {
+    const path = decodeURIComponent(new URL(url).pathname.replace(/^\/+/, ""));
+    return path.startsWith("projects/") ? path : `projects/migrated/${path}`;
+  } catch {
+    return `projects/migrated/${url.replace(/[^a-zA-Z0-9._-]+/g, "_").slice(-180)}`;
+  }
+}
+
+/** Rewrite one old URL to its new location across every table. */
+async function rewriteUrl(oldUrl: string, newUrl: string): Promise<void> {
+  await prisma.colouringPage.updateMany({
+    where: { originalImage: oldUrl },
+    data: { originalImage: newUrl },
+  });
+  await prisma.colouringPage.updateMany({
+    where: { processedImage: oldUrl },
+    data: { processedImage: newUrl },
+  });
+  await prisma.colouringPage.updateMany({
+    where: { completedReference: oldUrl },
+    data: { completedReference: newUrl },
+  });
+  await prisma.imageVersion.updateMany({
+    where: { originalImage: oldUrl },
+    data: { originalImage: newUrl },
+  });
+  await prisma.imageVersion.updateMany({
+    where: { processedImage: oldUrl },
+    data: { processedImage: newUrl },
+  });
+  await prisma.export.updateMany({
+    where: { filePath: oldUrl },
+    data: { filePath: newUrl },
+  });
+  await prisma.cover.updateMany({
+    where: { artwork: oldUrl },
+    data: { artwork: newUrl },
+  });
+  // Cover artwork version lists live inside the settings JSON string.
+  const covers = await prisma.cover.findMany({
+    where: { settings: { contains: oldUrl } },
+    select: { id: true, settings: true },
+  });
+  for (const c of covers) {
+    await prisma.cover.update({
+      where: { id: c.id },
+      data: { settings: c.settings.split(oldUrl).join(newUrl) },
+    });
+  }
+}
+
+export async function migrateStorage(): Promise<MigrateResult> {
+  const storage = getImageStorage();
+  const started = Date.now();
+
+  const referenced = await referencedUrls();
+  const foreign = [...referenced].filter((url) => !storage.ownsUrl(url));
+
+  // Old copies in Vercel Blob can be deleted once moved (frees that quota).
+  const blob = process.env.BLOB_READ_WRITE_TOKEN ? new VercelBlobStorage() : null;
+
+  let migrated = 0;
+  let bytesMoved = 0;
+  let failed = 0;
+  for (const oldUrl of foreign) {
+    if (Date.now() - started > MIGRATE_BUDGET_MS) break;
+    try {
+      const bytes = await storage.readBytes(oldUrl); // handles foreign URLs
+      const key = keyFromForeignUrl(oldUrl);
+      const newUrl = await storage.put(key, bytes, contentTypeFor(key));
+      await rewriteUrl(oldUrl, newUrl);
+      migrated++;
+      bytesMoved += bytes.length;
+      if (blob && blob.ownsUrl(oldUrl)) {
+        await blob.delete(oldUrl).catch(() => {});
+      }
+    } catch {
+      failed++;
+    }
+  }
+
+  return {
+    migrated,
+    bytesMoved,
+    failed,
+    remaining: Math.max(0, foreign.length - migrated - failed),
+    backend: storage.name,
   };
 }
 

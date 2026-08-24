@@ -35,6 +35,10 @@ export class LocalImageStorage implements ImageStorage {
     return readFile(resolveLocalKey(url.slice(URL_PREFIX.length)));
   }
 
+  ownsUrl(url: string): boolean {
+    return url.startsWith(URL_PREFIX);
+  }
+
   async delete(url: string): Promise<void> {
     if (!url.startsWith(URL_PREFIX)) return;
     try {
