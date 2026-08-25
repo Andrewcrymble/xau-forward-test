@@ -7,7 +7,7 @@
 // and the print-ready KDP cover PDF build.
 
 import { useEffect, useRef, useState } from "react";
-import type { ApiResponse, CoverDto, CoverSettings, ProjectDto } from "@/lib/types";
+import type { ApiResponse, CoverConcept, CoverDto, CoverSettings, ProjectDto } from "@/lib/types";
 import type { CoverBuildResult } from "@/lib/services/cover-service";
 import { Button, Card, Checkbox, Field, Select, TextArea, TextInput } from "@/components/ui";
 import { CoverPreview } from "@/components/cover/cover-preview";
@@ -28,6 +28,37 @@ const PAPER_LABELS: Record<CoverSettings["paperType"], string> = {
   blackWhiteCreamPaper: "Black ink · cream paper",
   colourWhitePaper: "Colour ink · white paper",
 };
+
+const CONCEPT_TYPE_LABELS: Record<CoverConcept["type"], string> = {
+  story: "Story cover — illustrated scene",
+  iconic: "Iconic cover — one bold subject",
+  premium: "Premium cover — refined & minimal",
+};
+
+const SCORE_AXES: Array<{ key: keyof CoverConcept["scores"]; label: string }> = [
+  { key: "thumbnailReadability", label: "Thumbnail readability" },
+  { key: "nicheClarity", label: "Niche clarity" },
+  { key: "visualAppeal", label: "Visual appeal" },
+  { key: "audienceFit", label: "Audience fit" },
+  { key: "originality", label: "Originality" },
+  { key: "brandConsistency", label: "ColourJoy consistency" },
+  { key: "commercialPotential", label: "Commercial potential" },
+];
+
+function PaletteChip({ colour }: { colour: string }) {
+  const isHex = /^#([0-9a-f]{3}|[0-9a-f]{6})$/i.test(colour.trim());
+  return isHex ? (
+    <span
+      className="inline-block h-5 w-5 rounded-full border border-stone-300"
+      style={{ backgroundColor: colour.trim() }}
+      title={colour}
+    />
+  ) : (
+    <span className="inline-block rounded-full border border-stone-300 bg-stone-50 px-2 py-0.5 text-[11px] text-stone-600">
+      {colour}
+    </span>
+  );
+}
 
 export function CoverScreen({
   project,
@@ -98,6 +129,33 @@ export function CoverScreen({
     }
   };
 
+  const [developingConcepts, setDevelopingConcepts] = useState(false);
+  const developConcepts = async () => {
+    setDevelopingConcepts(true);
+    setError(null);
+    try {
+      setCover(await api<CoverDto>(`/api/projects/${project.id}/cover/concepts`, { method: "POST" }));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Concept development failed");
+    } finally {
+      setDevelopingConcepts(false);
+    }
+  };
+
+  const chooseConcept = async (index: number) => {
+    setError(null);
+    try {
+      setCover(
+        await api<CoverDto>(`/api/projects/${project.id}/cover/concepts`, {
+          method: "POST",
+          body: JSON.stringify({ select: index }),
+        }),
+      );
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not select concept");
+    }
+  };
+
   const selectArtwork = async (url: string) => {
     setError(null);
     try {
@@ -165,6 +223,80 @@ export function CoverScreen({
         </p>
       )}
 
+      <Card className="space-y-3">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h2 className="text-base font-semibold text-stone-900">Cover concepts</h2>
+            <p className="text-xs text-stone-500">
+              Three retail cover directions — Story, Iconic and Premium — each
+              scored by the AI as a design judgement (not market data). Pick
+              one and it drives the artwork generator below.
+            </p>
+          </div>
+          <Button onClick={developConcepts} disabled={developingConcepts}>
+            {developingConcepts
+              ? "Developing concepts…"
+              : (settings.coverConcepts?.length ?? 0) > 0
+                ? "Develop fresh concepts"
+                : "Develop 3 cover concepts"}
+          </Button>
+        </div>
+        {(settings.coverConcepts?.length ?? 0) > 0 && (
+          <div className="grid gap-3 md:grid-cols-3">
+            {settings.coverConcepts!.map((c, i) => {
+              const selected = settings.selectedCoverConcept === i;
+              return (
+                <div
+                  key={`${c.type}-${i}`}
+                  className={`flex flex-col gap-2 rounded-xl border-2 p-3 ${
+                    selected ? "border-stone-900 bg-stone-50" : "border-stone-200"
+                  }`}
+                >
+                  <div>
+                    <span className="text-[11px] font-semibold uppercase tracking-wide text-stone-500">
+                      {CONCEPT_TYPE_LABELS[c.type] ?? c.type}
+                    </span>
+                    <h3 className="text-sm font-semibold text-stone-900">{c.name}</h3>
+                  </div>
+                  <p className="text-xs text-stone-600">{c.heroDescription}</p>
+                  <p className="text-xs text-stone-500">
+                    <span className="font-medium text-stone-600">Background:</span> {c.background}
+                  </p>
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    {c.palette.map((col, j) => (
+                      <PaletteChip key={`${col}-${j}`} colour={col} />
+                    ))}
+                  </div>
+                  <p className="text-xs text-stone-500">
+                    <span className="font-medium text-stone-600">Typography:</span> {c.typographyNote}
+                  </p>
+                  <details className="text-xs text-stone-600">
+                    <summary className="cursor-pointer font-medium">
+                      Design score: {c.scores.total} / 70
+                    </summary>
+                    <dl className="mt-1 grid grid-cols-2 gap-x-3 gap-y-0.5" style={{ fontVariantNumeric: "tabular-nums" }}>
+                      {SCORE_AXES.map((axis) => (
+                        <div key={axis.key} className="contents">
+                          <dt className="text-stone-500">{axis.label}</dt>
+                          <dd className="text-right font-semibold">{c.scores[axis.key]}</dd>
+                        </div>
+                      ))}
+                    </dl>
+                  </details>
+                  <Button
+                    variant={selected ? "primary" : "secondary"}
+                    onClick={() => chooseConcept(i)}
+                    disabled={selected}
+                  >
+                    {selected ? "Selected — drives artwork" : "Use this concept"}
+                  </Button>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </Card>
+
       <div className="grid gap-5 lg:grid-cols-3">
         <Card className="space-y-3">
           <h2 className="text-base font-semibold text-stone-900">Front cover artwork</h2>
@@ -195,6 +327,14 @@ export function CoverScreen({
           <p className="text-xs text-stone-500">
             Artwork is generated without any text — the title, subtitle and
             author below are typeset by the app.
+            {settings.selectedCoverConcept !== null &&
+              settings.selectedCoverConcept !== undefined &&
+              settings.coverConcepts?.[settings.selectedCoverConcept] && (
+                <>
+                  {" "}New versions follow the selected concept:{" "}
+                  <strong>{settings.coverConcepts[settings.selectedCoverConcept].name}</strong>.
+                </>
+              )}
           </p>
         </Card>
 

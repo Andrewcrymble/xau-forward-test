@@ -49,6 +49,9 @@ model Project {
   // + Book Style Profile) passed into every image-generation prompt.
   bookConcept String?
 
+  // ColourJoy interior style engine: "auto" | "bold_easy" | "cozy_cute"
+  // | "classic" | "detailed_adult" (auto derives from audience/complexity)
+  colourjoyStyle String @default("auto")
   // "standard" | "colour_by_numbers" | "mixed"
   colouringMode String @default("standard")
   // JSON-encoded CbnSettings: counts/difficulty/colours/palette/key placement

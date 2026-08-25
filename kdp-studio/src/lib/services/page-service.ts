@@ -13,6 +13,7 @@ import {
   tonesPromptText,
 } from "@/lib/config/book-options";
 import { parseBookConcept } from "@/lib/services/project-service";
+import { resolveColourJoyStyle } from "@/lib/config/colourjoy-styles";
 import {
   DEFAULT_BIBLE_SETTINGS,
   DEFAULT_CBN_SETTINGS,
@@ -68,6 +69,7 @@ type ProjectForPrompts = {
   emotionalTones: string;
   artworkTheme: string | null;
   bookConcept: string | null;
+  colourjoyStyle?: string | null;
   colouringMode: string;
   cbnSettings: string;
   bibleSettings: string;
@@ -137,6 +139,7 @@ export function composePrompt(
     tones: parseTones(project),
     artworkTheme: project.artworkTheme,
     creativeBrief: bookConcept?.creativeBrief ?? null,
+    styleEngine: resolveColourJoyStyle(project),
     character: bookConcept?.character ?? null,
     styleProfile: bookConcept?.styleProfile ?? null,
     pageText: pageText ?? null,
@@ -160,6 +163,10 @@ function planRequestBase(project: ProjectForPrompts) {
     artworkTheme: project.artworkTheme,
     creativeBrief: bookConcept?.creativeBrief ?? null,
     character: bookConcept?.character ?? null,
+    styleEngine: (() => {
+      const s = resolveColourJoyStyle(project);
+      return { label: s.label, planGuidance: s.planGuidance, complexityMix: s.complexityMix };
+    })(),
     bible: bible.enabled
       ? {
           translation:

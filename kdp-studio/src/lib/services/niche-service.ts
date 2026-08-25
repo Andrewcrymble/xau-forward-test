@@ -353,6 +353,7 @@ export async function buildBookFromNiche(
     description: idea.concept,
     emotionalTones: [],
     artworkTheme: idea.artwork,
+    colourjoyStyle: "auto",
     colouringMode,
     cbnSettings: undefined,
     bibleSettings: scripture

@@ -15,6 +15,7 @@ import {
 } from "@/lib/config/book-options";
 import { TRIM_SIZES } from "@/lib/config/kdp-spec";
 import { COLOURING_MODES, PROJECT_STATUSES } from "@/lib/types";
+import { COLOURJOY_STYLE_IDS } from "@/lib/config/colourjoy-styles";
 
 const audienceIds = TARGET_AUDIENCES.map((a) => a.id) as [string, ...string[]];
 const styleIds = STYLES.map((s) => s.id) as [string, ...string[]];
@@ -49,6 +50,9 @@ const baseProjectSchema = z.object({
     .max(EMOTIONAL_TONES.length)
     .default([]),
   artworkTheme: z.string().trim().max(3000).nullish(),
+  colourjoyStyle: z
+    .enum(COLOURJOY_STYLE_IDS as unknown as [string, ...string[]])
+    .default("auto"),
   colouringMode: z.enum(COLOURING_MODES).default("standard"),
   cbnSettings: z
     .object({

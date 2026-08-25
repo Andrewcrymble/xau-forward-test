@@ -3,6 +3,7 @@ import type {
   BookConceptRequest,
   BookPlanRequest,
   BookPlanResult,
+  CoverConceptRequest,
   ListingDraft,
   ListingRequest,
   NicheCardDraft,
@@ -11,7 +12,7 @@ import type {
   TextAIProvider,
   TextUsage,
 } from "./types";
-import type { NicheSeriesIdea } from "@/lib/types";
+import type { CoverConcept, NicheSeriesIdea } from "@/lib/types";
 
 // Built-in sample planner used when no AI provider key is configured.
 // Produces varied, deterministic placeholder concepts so the whole planning
@@ -260,6 +261,73 @@ export class MockTextProvider implements TextAIProvider {
     );
     return {
       niches,
+      usage: { provider: this.name, model: "sample-generator", tokensUsed: 0 },
+    };
+  }
+
+  async generateCoverConcepts(
+    req: CoverConceptRequest,
+  ): Promise<{ concepts: CoverConcept[]; usage: TextUsage }> {
+    const n = req.niche;
+    const makeScores = (base: number) => {
+      const scores = {
+        thumbnailReadability: Math.min(10, base + 1),
+        nicheClarity: base,
+        visualAppeal: base,
+        audienceFit: Math.min(10, base + 1),
+        originality: Math.max(1, base - 1),
+        brandConsistency: base,
+        commercialPotential: base,
+        total: 0,
+      };
+      scores.total =
+        scores.thumbnailReadability +
+        scores.nicheClarity +
+        scores.visualAppeal +
+        scores.audienceFit +
+        scores.originality +
+        scores.brandConsistency +
+        scores.commercialPotential;
+      return scores;
+    };
+    const concepts: CoverConcept[] = [
+      {
+        type: "story",
+        name: `A Day in ${n} (sample)`,
+        heroDescription:
+          `SAMPLE CONCEPT — add an AI provider key for real cover direction. ` +
+          `One warm, inviting scene of ${n.toLowerCase()} in mid-moment, filling 55–70% of the cover, ` +
+          `with a clear focal subject that reads instantly at thumbnail size.`,
+        background: `Soft gradient sky fading into simplified ${n.toLowerCase()} scenery, uncluttered behind the title area.`,
+        palette: ["#F4A261", "#E76F51", "#2A9D8F", "#264653", "#E9C46A"],
+        typographyNote: "Rounded friendly display face for the title, clean sans for the subtitle — two families max.",
+        scores: makeScores(7),
+      },
+      {
+        type: "iconic",
+        name: `The ${n} Emblem (sample)`,
+        heroDescription:
+          `SAMPLE CONCEPT — one bold, centred iconic subject from ${n.toLowerCase()}, ` +
+          `poster-style with strong silhouette, occupying 55–70% of the cover and unmistakable at 150px.`,
+        background: `Flat single-colour field with a subtle radial glow behind the hero — maximum thumbnail contrast.`,
+        palette: ["#1D3557", "#F1FAEE", "#E63946", "#A8DADC", "#457B9D"],
+        typographyNote: "Heavy condensed display face, title dominant across the top, subtitle in a light sans below.",
+        scores: makeScores(8),
+      },
+      {
+        type: "premium",
+        name: `${n} Keepsake Edition (sample)`,
+        heroDescription:
+          `SAMPLE CONCEPT — an elegant, gift-worthy composition of ${n.toLowerCase()} with refined detail and ` +
+          `a decorative frame device, hero art at 55–70%, styled to feel like a premium keepsake.`,
+        background: `Deep rich base colour with delicate ornamental corner flourishes and generous breathing room.`,
+        palette: ["#3C2A4D", "#C9A227", "#F5EFE6", "#7B5EA7", "#2B2118"],
+        typographyNote: "Classic serif title with gold-tone accent, small-caps subtitle — restrained and premium.",
+        scores: makeScores(6),
+      },
+    ];
+    return {
+      concepts,
       usage: { provider: this.name, model: "sample-generator", tokensUsed: 0 },
     };
   }

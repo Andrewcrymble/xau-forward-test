@@ -49,6 +49,8 @@ export interface PagePromptContext {
   creativeBrief?: string | null;
   /** Persistent Book Style Profile — included so every page matches. */
   styleProfile?: BookStyleProfile | null;
+  /** ColourJoy interior style engine (resolved, never "auto"). */
+  styleEngine?: { label: string; characteristics: string } | null;
   /** Recurring main character locked across the whole book. */
   character?: RecurringCharacter | null;
   /** Text intentionally part of the artwork (e.g. a Bible verse + reference). */
@@ -59,7 +61,7 @@ export interface PagePromptContext {
 
 function styleProfileSection(p: BookStyleProfile): string {
   return [
-    "BOOK STYLE PROFILE — every page of this book must follow this exact art direction so all pages look like the same professionally illustrated book:",
+    "BOOK STYLE PROFILE — LOCKED visual language: every page of this book must follow this exact art direction so all pages look like the same professionally illustrated book. Do not reinterpret the style on this page:",
     `- Line thickness: ${p.lineThickness}`,
     `- Level of detail: ${p.levelOfDetail}`,
     `- Decorative style: ${p.decorativeStyle}`,
@@ -162,6 +164,10 @@ export function buildColouringPagePrompt(ctx: PagePromptContext): string {
     `Illustration style: ${ctx.styleInstruction}`,
     `Target audience: ${ctx.audienceDescription}. Match the complexity of the line work to this audience.`,
   ];
+
+  if (ctx.styleEngine) {
+    sections.push(ctx.styleEngine.characteristics);
+  }
 
   if (ctx.tones?.trim()) {
     sections.push(`Emotional tone of the book: ${ctx.tones.trim()}. The page should communicate this feeling.`);

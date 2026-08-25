@@ -183,6 +183,8 @@ export interface ProjectDto {
   emotionalTones: string[];
   artworkTheme: string | null;
   bookConcept: BookConcept | null;
+  /** ColourJoy interior style engine id ("auto" resolves automatically). */
+  colourjoyStyle: string;
   colouringMode: ColouringMode;
   cbnSettings: CbnSettings;
   bibleSettings: BibleSettings;
@@ -267,6 +269,37 @@ export interface CoverSettings {
   backArtwork: boolean;
   /** All generated artwork URLs (the Cover.artwork field is the selected one). */
   artworkVersions: string[];
+  /** Three scored cover concepts (Story / Iconic / Premium), when developed. */
+  coverConcepts?: CoverConcept[] | null;
+  /** Index into coverConcepts of the concept driving artwork generation. */
+  selectedCoverConcept?: number | null;
+}
+
+/** Scores are AI self-assessment out of 10 — design opinions, not data. */
+export interface CoverConceptScores {
+  thumbnailReadability: number;
+  nicheClarity: number;
+  visualAppeal: number;
+  audienceFit: number;
+  originality: number;
+  brandConsistency: number;
+  commercialPotential: number;
+  total: number;
+}
+
+/** One retail cover direction from the Cover Concept Engine. */
+export interface CoverConcept {
+  /** "story" = illustrated scene; "iconic" = one bold niche composition;
+   *  "premium" = fewer, stronger elements with typography leading. */
+  type: "story" | "iconic" | "premium";
+  name: string;
+  /** The single cohesive hero composition (55–70% of the visual weight). */
+  heroDescription: string;
+  background: string;
+  /** 5–8 deliberate dominant colours, human-readable. */
+  palette: string[];
+  typographyNote: string;
+  scores: CoverConceptScores;
 }
 
 export const DEFAULT_COVER_SETTINGS: CoverSettings = {

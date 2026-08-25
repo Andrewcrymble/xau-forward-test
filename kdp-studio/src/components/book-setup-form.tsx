@@ -26,6 +26,7 @@ import {
   verseFont,
 } from "@/lib/config/book-options";
 import { TRIM_SIZES } from "@/lib/config/kdp-spec";
+import { COLOURJOY_STYLES } from "@/lib/config/colourjoy-styles";
 import {
   projectCreateSchema,
   type ProjectCreateInput,
@@ -74,6 +75,7 @@ const EMPTY_FORM: FormState = {
   specificAngle: "",
   emotionalTones: [],
   artworkTheme: "",
+  colourjoyStyle: "auto",
   colouringMode: "standard",
   cbnSettings: { ...DEFAULT_CBN_SETTINGS },
   bibleSettings: { ...DEFAULT_BIBLE_SETTINGS },
@@ -100,6 +102,7 @@ function projectToForm(p: ProjectDto): FormState {
     specificAngle: p.specificAngle ?? "",
     emotionalTones: p.emotionalTones,
     artworkTheme: p.artworkTheme ?? "",
+    colourjoyStyle: p.colourjoyStyle ?? "auto",
     colouringMode: p.colouringMode,
     cbnSettings: p.cbnSettings,
     bibleSettings: p.bibleSettings,
@@ -573,6 +576,24 @@ export function BookSetupForm({
             </option>
           ))}
         </Select>
+      </Field>
+      <Field label="ColourJoy interior style">
+        <div className="space-y-1.5">
+          <Select
+            value={form.colourjoyStyle ?? "auto"}
+            onChange={(e) => update({ colourjoyStyle: e.target.value })}
+          >
+            <option value="auto">Auto — pick from audience &amp; complexity</option>
+            {COLOURJOY_STYLES.map((s) => (
+              <option key={s.id} value={s.id}>{s.label}</option>
+            ))}
+          </Select>
+          <p className="text-[11px] text-stone-500">
+            {form.colourjoyStyle && form.colourjoyStyle !== "auto"
+              ? `Best for: ${COLOURJOY_STYLES.find((s) => s.id === form.colourjoyStyle)?.suits}`
+              : "The house style shapes line weight, detail and the complexity mix across the whole book. Colour by Numbers is chosen below as the book colouring style."}
+          </p>
+        </div>
       </Field>
       <Field label="Book colouring style" error={errors.colouringMode}>
         <div className="flex flex-wrap gap-2">

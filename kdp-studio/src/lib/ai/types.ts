@@ -5,6 +5,7 @@
 import type {
   BookStyleProfile,
   NicheScores,
+  CoverConcept,
   NicheSeriesIdea,
   RecurringCharacter,
 } from "@/lib/types";
@@ -38,6 +39,8 @@ export interface BookPlanRequest {
   creativeBrief?: string | null;
   /** Recurring main character to feature across the book, when set. */
   character?: RecurringCharacter | null;
+  /** Resolved ColourJoy interior style: planner guidance + complexity mix. */
+  styleEngine?: { label: string; planGuidance: string; complexityMix: string } | null;
   /** Number of unique page concepts to produce. */
   count: number;
   /** Mixed-mode: how many of the concepts should be colour-by-numbers pages
@@ -119,12 +122,29 @@ export interface BookConceptRequest {
   colouringMode: string;
   /** Invent a recurring main character locked across the whole book. */
   includeCharacter?: boolean;
+  /** Resolved ColourJoy interior style the concept must be built around. */
+  styleEngine?: { label: string; characteristics: string } | null;
 }
 
 export interface BookConceptDraft {
   creativeBrief: string;
   styleProfile: BookStyleProfile;
   character?: RecurringCharacter | null;
+}
+
+// ---------------------------------------------------------------------------
+// Cover concept engine
+// ---------------------------------------------------------------------------
+
+export interface CoverConceptRequest {
+  title: string;
+  subtitle?: string | null;
+  niche: string;
+  subNiche?: string | null;
+  audience: string;
+  tones?: string | null;
+  /** Resolved ColourJoy interior style label, for interior/cover coherence. */
+  styleLabel?: string | null;
 }
 
 // ---------------------------------------------------------------------------
@@ -185,6 +205,10 @@ export interface TextAIProvider {
   discoverNiches(
     req: NicheDiscoveryRequest,
   ): Promise<{ niches: NicheCardDraft[]; usage: TextUsage }>;
+  /** Develop three scored retail cover concepts (Story / Iconic / Premium). */
+  generateCoverConcepts(
+    req: CoverConceptRequest,
+  ): Promise<{ concepts: CoverConcept[]; usage: TextUsage }>;
   /** Suggest a book series built around one niche. */
   generateNicheSeries(
     niche: NicheCardDraft | { name: string; concept?: string | null; audience?: string | null },

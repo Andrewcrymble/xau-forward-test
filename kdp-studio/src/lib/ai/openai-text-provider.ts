@@ -3,6 +3,7 @@ import type {
   BookConceptRequest,
   BookPlanRequest,
   BookPlanResult,
+  CoverConceptRequest,
   ListingDraft,
   ListingRequest,
   NicheCardDraft,
@@ -11,7 +12,7 @@ import type {
   TextAIProvider,
   TextUsage,
 } from "./types";
-import type { NicheSeriesIdea } from "@/lib/types";
+import type { CoverConcept, NicheSeriesIdea } from "@/lib/types";
 
 // OpenAI text provider. Uses the Chat Completions API with a JSON schema
 // response format so results parse reliably. Server-side only.
@@ -95,6 +96,12 @@ function planUserPrompt(req: BookPlanRequest, count: number): string {
     parts.push(`Recurring imagery to draw from across the book: ${req.artworkTheme.trim()}`);
   if (req.creativeBrief?.trim())
     parts.push(`CREATIVE BRIEF for the whole book:\n${req.creativeBrief.trim()}`);
+  if (req.styleEngine) {
+    parts.push(
+      `INTERIOR STYLE — ${req.styleEngine.label}: ${req.styleEngine.planGuidance} ${req.styleEngine.complexityMix} ` +
+        "Assign each concept a complexity that fits this distribution, progressing naturally rather than randomly.",
+    );
+  }
   if (req.character) {
     parts.push(
       `RECURRING MAIN CHARACTER: ${req.character.name} — ${req.character.description}. ` +
@@ -455,6 +462,9 @@ export class OpenAITextProvider implements TextAIProvider {
       `Target audience: ${req.audience}`,
       req.tones ? `Emotional tone: ${req.tones}` : "",
       req.artworkTheme ? `Recurring imagery requested: ${req.artworkTheme}` : "",
+      req.styleEngine
+        ? `ColourJoy interior style — ${req.styleEngine.label}: ${req.styleEngine.characteristics} Build the style profile around this house style.`
+        : "",
       `Illustration style: ${req.style}`,
       `Line-art complexity: ${req.complexity}`,
       `Book length: ${req.pageCount} colouring pages`,
@@ -572,6 +582,111 @@ export class OpenAITextProvider implements TextAIProvider {
     );
     return {
       niches: (data.niches ?? []).filter((n) => n.name),
+      usage: { provider: this.name, model: this.model, tokensUsed: tokens },
+    };
+  }
+
+  async generateCoverConcepts(
+    req: CoverConceptRequest,
+  ): Promise<{ concepts: CoverConcept[]; usage: TextUsage }> {
+    const scoreProps = Object.fromEntries(
+      [
+        "thumbnailReadability", "nicheClarity", "visualAppeal", "audienceFit",
+        "originality", "brandConsistency", "commercialPotential", "total",
+      ].map((k) => [k, { type: "number" }]),
+    );
+    const schema = {
+      name: "cover_concepts",
+      strict: true,
+      schema: {
+        type: "object",
+        additionalProperties: false,
+        properties: {
+          concepts: {
+            type: "array",
+            items: {
+              type: "object",
+              additionalProperties: false,
+              properties: {
+                type: { type: "string", enum: ["story", "iconic", "premium"] },
+                name: { type: "string" },
+                heroDescription: {
+                  type: "string",
+                  description:
+                    "ONE cohesive full-colour composition carrying 55-70% of the visual weight — never scattered clip-art elements",
+                },
+                background: { type: "string" },
+                palette: {
+                  type: "array",
+                  items: { type: "string" },
+                  description: "5-8 deliberate dominant colours",
+                },
+                typographyNote: { type: "string" },
+                scores: {
+                  type: "object",
+                  additionalProperties: false,
+                  properties: scoreProps,
+                  required: Object.keys(scoreProps),
+                },
+              },
+              required: [
+                "type", "name", "heroDescription", "background", "palette",
+                "typographyNote", "scores",
+              ],
+            },
+          },
+        },
+        required: ["concepts"],
+      },
+    };
+    const system = [
+      "You are a senior book-cover art director for ColourJoy Colouring Books, designing FULL-COLOUR retail covers that must stop the scroll on Amazon, communicate the niche in two seconds, and look professional at 150px thumbnail size.",
+      "Develop exactly THREE genuinely different concepts: 'story' (a colourful illustrated scene with emotional storytelling), 'iconic' (one bold, instantly recognisable niche composition), and 'premium' (a cleaner composition with exceptional typography and fewer, stronger elements).",
+      "Each hero must be ONE cohesive composition, never scattered clip-art. Backgrounds must support the title, never plain white by default. Palettes are 5-8 deliberate dominant colours suited to the audience.",
+      "Never imitate competitor books, artists or copyrighted characters; describe desired characteristics generically.",
+      "Score each concept 1-10 on every axis, honestly differentiating the three; total = sum of the seven axes. Scores are your design judgement, not market data.",
+    ].join(" ");
+    const user = [
+      `Book title: ${req.title}`,
+      req.subtitle ? `Subtitle: ${req.subtitle}` : "",
+      `Niche: ${req.niche}${req.subNiche ? ` — ${req.subNiche}` : ""}`,
+      `Audience: ${req.audience}`,
+      req.tones ? `Emotional tone: ${req.tones}` : "",
+      req.styleLabel
+        ? `Interior style: ${req.styleLabel} — the cover must honestly represent this interior.`
+        : "",
+      "Produce the three concepts with scores.",
+    ]
+      .filter(Boolean)
+      .join("\n");
+    const { data, tokens } = await this.jsonChat<{ concepts: CoverConcept[] }>(
+      system,
+      user,
+      schema,
+    );
+    const clamp = (n: number) => Math.max(1, Math.min(10, Math.round(n || 5)));
+    const concepts = (data.concepts ?? []).slice(0, 3).map((c) => {
+      const s = c.scores ?? ({} as CoverConcept["scores"]);
+      const axes = {
+        thumbnailReadability: clamp(s.thumbnailReadability),
+        nicheClarity: clamp(s.nicheClarity),
+        visualAppeal: clamp(s.visualAppeal),
+        audienceFit: clamp(s.audienceFit),
+        originality: clamp(s.originality),
+        brandConsistency: clamp(s.brandConsistency),
+        commercialPotential: clamp(s.commercialPotential),
+      };
+      return {
+        ...c,
+        palette: (c.palette ?? []).filter(Boolean).slice(0, 8),
+        scores: {
+          ...axes,
+          total: Object.values(axes).reduce((a, b) => a + b, 0),
+        },
+      };
+    });
+    return {
+      concepts,
       usage: { provider: this.name, model: this.model, tokensUsed: tokens },
     };
   }

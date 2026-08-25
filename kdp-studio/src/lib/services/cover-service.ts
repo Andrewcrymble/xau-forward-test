@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/db";
 import { pruneOldExports } from "@/lib/services/maintenance-service";
-import { getImageProvider } from "@/lib/ai";
+import { getImageProvider, getTextProvider } from "@/lib/ai";
 import { getImageStorage } from "@/lib/storage";
 import { PageServiceError } from "@/lib/services/page-service";
 import { computeInteriorLayout } from "@/lib/services/interior-service";
@@ -8,7 +8,9 @@ import { buildCoverPdf } from "@/lib/pdf/cover-pdf";
 import {
   audiencePromptText,
   stylePromptText,
+  tonesPromptText,
 } from "@/lib/config/book-options";
+import { resolveColourJoyStyle } from "@/lib/config/colourjoy-styles";
 import {
   MIN_SPINE_TEXT_WIDTH_IN,
   TRIM_SIZES,
@@ -17,6 +19,7 @@ import {
 } from "@/lib/config/kdp-spec";
 import {
   DEFAULT_COVER_SETTINGS,
+  type CoverConcept,
   type CoverDto,
   type CoverSettings,
 } from "@/lib/types";
@@ -143,26 +146,123 @@ export async function updateCover(
 
 /** Colourful commercial cover artwork — a completely separate prompt from
  *  the black-and-white interior pages. Typography is added by the editor,
- *  so the artwork itself must contain no text. */
-function coverArtPrompt(project: {
-  title: string;
-  niche: string;
-  description: string | null;
-  targetAudience: string;
-  customAudience: string | null;
-  style: string;
-  customStyle: string | null;
-}): string {
+ *  so the artwork itself must contain no text. When a cover concept has
+ *  been developed and selected, the prompt is built from that concept. */
+function coverArtPrompt(
+  project: {
+    title: string;
+    niche: string;
+    description: string | null;
+    targetAudience: string;
+    customAudience: string | null;
+    style: string;
+    customStyle: string | null;
+  },
+  concept?: CoverConcept | null,
+): string {
+  const noText =
+    "Absolutely NO text, NO lettering, NO title, NO words, NO logos, NO watermarks anywhere in the image.";
+  if (concept) {
+    return [
+      `Vibrant, professional retail book cover illustration for a colouring book about: ${project.niche}.`,
+      `Aimed at ${audiencePromptText(project.targetAudience, project.customAudience)}.`,
+      `Hero composition (${concept.name}): ${concept.heroDescription}`,
+      `Background: ${concept.background}`,
+      concept.palette.length > 0
+        ? `Deliberate dominant colour palette: ${concept.palette.join(", ")}. Use these colours with strong contrast between the focal subject and the background.`
+        : "",
+      "ONE cohesive full-colour composition — never a collage of disconnected elements. The hero subject carries 55-70% of the visual weight.",
+      "The focal subject must read instantly even at 150-pixel thumbnail size.",
+      "Portrait orientation. Keep clear, calm space above the scene for a title and near the bottom for a subtitle.",
+      noText,
+    ]
+      .filter(Boolean)
+      .join(" ");
+  }
   return [
     `Vibrant, professional book cover illustration for a colouring book about: ${project.niche}.`,
     project.description?.trim() ? `Additional context: ${project.description.trim()}` : "",
     `Aimed at ${audiencePromptText(project.targetAudience, project.customAudience)}.`,
     `Art direction: rich full colour, inviting and commercial, inspired by ${stylePromptText(project.style, project.customStyle)}.`,
     "Portrait orientation. A single striking scene with a clear focal subject and space above it for a title.",
-    "Absolutely NO text, NO lettering, NO title, NO words, NO logos, NO watermarks anywhere in the image.",
+    noText,
   ]
     .filter(Boolean)
     .join(" ");
+}
+
+/** The concept currently driving artwork generation, when one is selected. */
+function selectedConcept(settings: CoverSettings): CoverConcept | null {
+  const idx = settings.selectedCoverConcept;
+  if (idx === null || idx === undefined) return null;
+  return settings.coverConcepts?.[idx] ?? null;
+}
+
+/** Develop three scored retail cover directions (Story / Iconic / Premium)
+ *  and store them in the cover settings. Replaces any previous set — the
+ *  selection resets so artwork is never generated from a stale index. */
+export async function generateCoverConcepts(projectId: string): Promise<CoverDto> {
+  const { project, cover } = await ensureCover(projectId);
+  const settings = parseSettings(cover.settings);
+
+  let tones = "";
+  try {
+    tones = tonesPromptText(JSON.parse(project.emotionalTones || "[]"));
+  } catch {
+    tones = "";
+  }
+
+  const provider = getTextProvider();
+  const { concepts, usage } = await provider.generateCoverConcepts({
+    title: cover.title ?? project.title,
+    subtitle: cover.subtitle,
+    niche: project.niche,
+    subNiche: project.subNiche,
+    audience: audiencePromptText(project.targetAudience, project.customAudience),
+    tones: tones || null,
+    styleLabel: resolveColourJoyStyle(project).label,
+  });
+
+  await prisma.cover.update({
+    where: { projectId },
+    data: {
+      settings: JSON.stringify({
+        ...settings,
+        coverConcepts: concepts,
+        selectedCoverConcept: null,
+      }),
+    },
+  });
+  await prisma.generationLog.create({
+    data: {
+      projectId,
+      kind: "cover_concepts",
+      provider: usage.provider,
+      model: usage.model,
+      tokensUsed: usage.tokensUsed ?? null,
+      message: `Developed ${concepts.length} cover concepts`,
+    },
+  });
+  return toDto(projectId);
+}
+
+/** Choose which developed concept drives artwork generation. */
+export async function selectCoverConcept(
+  projectId: string,
+  index: number,
+): Promise<CoverDto> {
+  const { cover } = await ensureCover(projectId);
+  const settings = parseSettings(cover.settings);
+  if (!settings.coverConcepts || !settings.coverConcepts[index]) {
+    throw new PageServiceError("Unknown cover concept", 404);
+  }
+  await prisma.cover.update({
+    where: { projectId },
+    data: {
+      settings: JSON.stringify({ ...settings, selectedCoverConcept: index }),
+    },
+  });
+  return toDto(projectId);
 }
 
 export async function generateCoverArtwork(projectId: string): Promise<CoverDto> {
@@ -171,7 +271,7 @@ export async function generateCoverArtwork(projectId: string): Promise<CoverDto>
 
   const provider = getImageProvider();
   const image = await provider.generateImage({
-    prompt: coverArtPrompt(project),
+    prompt: coverArtPrompt(project, selectedConcept(settings)),
     seed: settings.artworkVersions.length + 1,
     variant: "cover",
   });

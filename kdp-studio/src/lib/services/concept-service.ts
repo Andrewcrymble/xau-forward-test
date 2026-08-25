@@ -8,6 +8,7 @@ import {
 } from "@/lib/config/book-options";
 import { PageServiceError } from "@/lib/services/page-service";
 import { parseBookConcept } from "@/lib/services/project-service";
+import { resolveColourJoyStyle } from "@/lib/config/colourjoy-styles";
 import type { BookConcept, BookStyleProfile } from "@/lib/types";
 
 // BUILD MY BOOK CONCEPT — turns the niche/audience/tone/artwork inputs into
@@ -42,6 +43,10 @@ export async function buildBookConcept(
     pageCount: project.numberOfDesigns,
     colouringMode: project.colouringMode,
     includeCharacter: opts?.includeCharacter ?? false,
+    styleEngine: (() => {
+      const s = resolveColourJoyStyle(project);
+      return { label: s.label, characteristics: s.characteristics };
+    })(),
   });
 
   const stored: BookConcept = {
