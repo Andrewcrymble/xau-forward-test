@@ -12,7 +12,10 @@ const H = INTERIOR_IMAGE.heightPx; // 3300
 
 const PANEL_W = 1900;
 const PAD = 78;
-const MARGIN_BOTTOM = 260;
+// Distance from the page bottom to the panel's bottom edge. Larger than the
+// safe margin on purpose: the plaque floats INSIDE the artwork with scenery
+// visible beneath and beside it — mounted on the image, not stacked under it.
+const MARGIN_BOTTOM = 400;
 const MAX_LINES = 6;
 
 /** Split "verse text — Book 1:2 (KJV)" into body + reference when present. */
