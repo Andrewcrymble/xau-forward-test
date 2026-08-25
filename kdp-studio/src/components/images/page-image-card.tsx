@@ -3,6 +3,7 @@
 /* eslint-disable @next/next/no-img-element */
 
 import type { PageDto } from "@/lib/types";
+import { ReferencePhotoControl } from "@/components/images/reference-photo-control";
 
 export const GEN_STATUS_META: Record<string, { label: string; cls: string }> = {
   planned: { label: "Planned", cls: "bg-stone-100 text-stone-600" },
@@ -23,6 +24,7 @@ export function PageImageCard({
   onView,
   onGenerate,
   onApprove,
+  onPageUpdate,
 }: {
   page: PageDto;
   selected: boolean;
@@ -32,6 +34,7 @@ export function PageImageCard({
   onView: (id: string) => void;
   onGenerate: (id: string) => void;
   onApprove: (id: string) => void;
+  onPageUpdate: (page: PageDto) => void;
 }) {
   const meta = GEN_STATUS_META[page.generationStatus] ?? GEN_STATUS_META.planned;
   const isWorking =
@@ -139,6 +142,7 @@ export function PageImageCard({
           ) : (
             <span className="px-2 py-1 text-xs font-semibold text-emerald-700">✓</span>
           )}
+          <ReferencePhotoControl page={page} onPageUpdate={onPageUpdate} compact />
         </div>
       </div>
     </div>

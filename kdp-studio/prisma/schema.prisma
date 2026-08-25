@@ -109,6 +109,9 @@ model ColouringPage {
   // Storage keys resolved via the storage abstraction (not raw binary data)
   originalImage  String?
   processedImage String?
+  // User-uploaded reference photo the AI must faithfully redraw as line art
+  // (e.g. a real mural photographed for a murals colouring book).
+  referenceImage String?
 
   generationStatus   String @default("planned") // GenerationStatus
   approvalStatus     String @default("pending") // ApprovalStatus

@@ -266,6 +266,7 @@ export function ImagesScreen({
             onView={setViewId}
             onGenerate={(id) => enqueue([id])}
             onApprove={approvePage}
+            onPageUpdate={replacePage}
           />
         ))}
       </div>

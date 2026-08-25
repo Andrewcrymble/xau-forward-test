@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 import type { ApiResponse, PageDto } from "@/lib/types";
 import type { VersionDto } from "@/lib/services/image-service";
 import { Button, TextArea } from "@/components/ui";
+import { ReferencePhotoControl } from "@/components/images/reference-photo-control";
 
 async function api<T>(url: string, init?: RequestInit): Promise<T> {
   const res = await fetch(url, {
@@ -163,6 +164,7 @@ export function PageViewModal({
                 )}
               </div>
             )}
+            <ReferencePhotoControl page={page} onPageUpdate={onPageUpdate} />
             {page.validationIssues && (
               <div className="rounded-lg border border-orange-200 bg-orange-50 px-3 py-2">
                 <p className="text-xs font-semibold text-orange-800">

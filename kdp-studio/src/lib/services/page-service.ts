@@ -49,6 +49,7 @@ function toDto(p: ColouringPage): PageDto {
     promptEdited: p.promptEdited,
     originalImage: p.originalImage,
     processedImage: p.processedImage,
+    referenceImage: p.referenceImage,
     generationStatus: p.generationStatus as GenerationStatus,
     approvalStatus: p.approvalStatus as ApprovalStatus,
     validationStatus: p.validationStatus as ValidationStatus,

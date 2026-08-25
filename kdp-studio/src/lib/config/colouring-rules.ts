@@ -94,6 +94,19 @@ export interface CbnPromptContext {
  * with clean enclosed shapes. The numbers, outlines and colour key are added
  * PROGRAMMATICALLY afterwards — the image AI must never draw numbers.
  */
+/** Prepended at generation time when the page has an uploaded reference
+ *  photo — the provider redraws THAT image instead of inventing a scene. */
+export const REFERENCE_IMAGE_INSTRUCTION =
+  "REFERENCE PHOTO SUPPLIED: faithfully redraw the supplied photograph as the artwork. " +
+  "Keep the real composition, subjects, proportions and distinctive details recognisable — " +
+  "do not invent a different scene, add new subjects, or change the layout. " +
+  "Convert it fully into the required style: simplify photographic detail into clean shapes.";
+
+export const CBN_REFERENCE_IMAGE_INSTRUCTION =
+  "REFERENCE PHOTO SUPPLIED: faithfully redraw the supplied photograph as the flat-colour artwork. " +
+  "Keep the real composition, subjects, proportions and distinctive details recognisable — " +
+  "do not invent a different scene. Simplify the photo into large flat solid-colour shapes.";
+
 export function buildCbnArtworkPrompt(ctx: CbnPromptContext): string {
   const sections: string[] = [
     `Flat colour illustration for a colour-by-numbers colouring page: ${ctx.pageConcept}`,

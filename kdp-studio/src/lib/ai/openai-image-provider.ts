@@ -38,25 +38,49 @@ export class OpenAIImageProvider implements ImageAIProvider {
   }
 
   async generateImage(req: ImageGenerationRequest): Promise<GeneratedImage> {
-    const size = PORTRAIT_SIZE[this.model] ?? "1024x1536";
-    const body: Record<string, unknown> = {
-      model: this.model,
-      prompt: req.prompt,
-      n: 1,
-      size,
-      quality: this.quality,
-    };
-    // gpt-image-1 always returns base64; dall-e-3 needs to be asked.
-    if (this.model === "dall-e-3") body.response_format = "b64_json";
+    // Reference photos go through the edits endpoint (image-to-image), which
+    // only gpt-image-1 supports — dall-e-3 sessions switch model for the call.
+    const model = req.referenceImage ? "gpt-image-1" : this.model;
+    const size = PORTRAIT_SIZE[model] ?? "1024x1536";
+    const quality = model === this.model ? this.quality : "medium";
 
-    const res = await fetch("https://api.openai.com/v1/images/generations", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${this.apiKey}`,
-      },
-      body: JSON.stringify(body),
-    });
+    let res: Response;
+    if (req.referenceImage) {
+      const form = new FormData();
+      form.append("model", model);
+      form.append("prompt", req.prompt);
+      form.append("n", "1");
+      form.append("size", size);
+      form.append("quality", quality);
+      form.append(
+        "image",
+        new Blob([new Uint8Array(req.referenceImage)], { type: "image/jpeg" }),
+        "reference.jpg",
+      );
+      res = await fetch("https://api.openai.com/v1/images/edits", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${this.apiKey}` },
+        body: form,
+      });
+    } else {
+      const body: Record<string, unknown> = {
+        model,
+        prompt: req.prompt,
+        n: 1,
+        size,
+        quality,
+      };
+      // gpt-image-1 always returns base64; dall-e-3 needs to be asked.
+      if (model === "dall-e-3") body.response_format = "b64_json";
+      res = await fetch("https://api.openai.com/v1/images/generations", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${this.apiKey}`,
+        },
+        body: JSON.stringify(body),
+      });
+    }
     if (!res.ok) {
       const text = await res.text().catch(() => "");
       let detail = text.slice(0, 300);
@@ -76,8 +100,8 @@ export class OpenAIImageProvider implements ImageAIProvider {
       data: Buffer.from(b64, "base64"),
       contentType: "image/png",
       provider: this.name,
-      model: this.model,
-      estimatedCost: ESTIMATED_COST[this.model]?.[this.quality],
+      model,
+      estimatedCost: ESTIMATED_COST[model]?.[quality],
     };
   }
 }

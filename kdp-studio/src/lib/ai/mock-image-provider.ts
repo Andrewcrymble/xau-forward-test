@@ -122,6 +122,42 @@ export class MockImageProvider implements ImageAIProvider {
   async generateImage(req: ImageGenerationRequest): Promise<GeneratedImage> {
     // Small artificial delay so queue behaviour (concurrency, pause) is visible.
     await new Promise((r) => setTimeout(r, 400 + Math.random() * 600));
+    if (req.referenceImage && req.variant !== "cover") {
+      // Keyless mode still honours reference photos: a real local edge
+      // sketch so the workflow is fully testable without an API key. Each
+      // step is a separate sharp() invocation — within one pipeline sharp
+      // applies operations in ITS order, not call order. CBN gets a flat
+      // posterised version instead, since its pipeline needs colour regions.
+      const fitted = sharp(req.referenceImage).resize(W, H, {
+        fit: "contain",
+        background: "#ffffff",
+      });
+      let data: Buffer;
+      if (req.variant === "cbn-flat") {
+        data = await fitted
+          .median(9)
+          .blur(2)
+          .png({ palette: true, colors: 8, dither: 0 })
+          .toBuffer();
+      } else {
+        const grey = await fitted.greyscale().blur(1.2).png().toBuffer();
+        const edges = await sharp(grey)
+          .convolve({ width: 3, height: 3, kernel: [0, 1, 0, 1, -4, 1, 0, 1, 0] })
+          .png()
+          .toBuffer();
+        const binary = await sharp(edges).threshold(16).png().toBuffer();
+        const inverted = await sharp(binary).negate().png().toBuffer();
+        // Thicken the 1px edge lines into colourable outlines.
+        data = await sharp(inverted).blur(0.9).threshold(215).png().toBuffer();
+      }
+      return {
+        data,
+        contentType: "image/png",
+        provider: this.name,
+        model: "placeholder-sketcher",
+        estimatedCost: 0,
+      };
+    }
     const svg =
       req.variant === "cover"
         ? coverPlaceholderSvg(req.seed ?? 1)

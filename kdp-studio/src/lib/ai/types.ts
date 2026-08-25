@@ -188,6 +188,9 @@ export interface ImageGenerationRequest {
    *  rely on the prompt alone. "cbn-flat" is the flat-colour base artwork
    *  for colour-by-numbers pages. */
   variant?: "line-art" | "cover" | "cbn-flat";
+  /** User-supplied reference photo. When present the provider must redraw
+   *  THIS image (image-to-image) rather than inventing a scene. */
+  referenceImage?: Buffer | null;
 }
 
 export interface GeneratedImage {

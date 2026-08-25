@@ -51,12 +51,13 @@ async function referencedUrls(): Promise<Set<string>> {
   };
 
   const pages = await prisma.colouringPage.findMany({
-    select: { originalImage: true, processedImage: true, completedReference: true, cbnData: true },
+    select: { originalImage: true, processedImage: true, completedReference: true, referenceImage: true, cbnData: true },
   });
   for (const p of pages) {
     add(p.originalImage);
     add(p.processedImage);
     add(p.completedReference);
+    add(p.referenceImage);
     // CBN data can reference extra rendered images (numbered page, key strip).
     if (p.cbnData) {
       try {
@@ -206,6 +207,10 @@ async function rewriteUrl(oldUrl: string, newUrl: string): Promise<void> {
   await prisma.colouringPage.updateMany({
     where: { completedReference: oldUrl },
     data: { completedReference: newUrl },
+  });
+  await prisma.colouringPage.updateMany({
+    where: { referenceImage: oldUrl },
+    data: { referenceImage: newUrl },
   });
   await prisma.imageVersion.updateMany({
     where: { originalImage: oldUrl },

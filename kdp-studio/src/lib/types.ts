@@ -210,6 +210,8 @@ export interface PageDto {
   promptEdited: boolean;
   originalImage: string | null;
   processedImage: string | null;
+  /** User-uploaded reference photo the AI faithfully redraws as line art. */
+  referenceImage: string | null;
   generationStatus: GenerationStatus;
   approvalStatus: ApprovalStatus;
   validationStatus: ValidationStatus;

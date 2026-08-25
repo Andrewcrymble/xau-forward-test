@@ -6,7 +6,11 @@ import type { GeneratedImage } from "@/lib/ai/types";
 import { getImageStorage } from "@/lib/storage";
 import { normaliseToPrintCanvas } from "@/lib/images/normalise";
 import { processColourByNumbers } from "@/lib/images/colour-by-numbers";
-import { buildCbnArtworkPrompt } from "@/lib/config/colouring-rules";
+import {
+  buildCbnArtworkPrompt,
+  CBN_REFERENCE_IMAGE_INSTRUCTION,
+  REFERENCE_IMAGE_INSTRUCTION,
+} from "@/lib/config/colouring-rules";
 import {
   CBN_DIFFICULTIES,
   audiencePromptText,
@@ -42,6 +46,7 @@ function pageToDto(p: {
   promptEdited: boolean;
   originalImage: string | null;
   processedImage: string | null;
+  referenceImage: string | null;
   generationStatus: string;
   approvalStatus: string;
   validationStatus: string;
@@ -70,6 +75,7 @@ function pageToDto(p: {
     promptEdited: p.promptEdited,
     originalImage: p.originalImage,
     processedImage: p.processedImage,
+    referenceImage: p.referenceImage,
     generationStatus: p.generationStatus as PageDto["generationStatus"],
     approvalStatus: p.approvalStatus as PageDto["approvalStatus"],
     validationStatus: p.validationStatus as PageDto["validationStatus"],
@@ -77,6 +83,58 @@ function pageToDto(p: {
     generationAttempts: p.generationAttempts,
     notes: p.notes,
   };
+}
+
+/**
+ * Set or remove a page's reference photo. The image is downscaled and
+ * re-encoded as JPEG (photos compress far better than PNG), stored under
+ * the page's own key prefix, and any previous reference file is deleted.
+ */
+export async function setPageReference(
+  pageId: string,
+  imageBytes: Buffer | null,
+): Promise<PageDto> {
+  const page = await prisma.colouringPage.findUnique({ where: { id: pageId } });
+  if (!page) throw new PageServiceError("Page not found", 404);
+  const storage = getImageStorage();
+
+  let url: string | null = null;
+  if (imageBytes) {
+    let jpeg: Buffer;
+    try {
+      jpeg = await sharp(imageBytes)
+        .rotate() // honour EXIF orientation from phone/tablet cameras
+        .resize(1600, 1600, { fit: "inside", withoutEnlargement: true })
+        .flatten({ background: "#ffffff" })
+        .jpeg({ quality: 85 })
+        .toBuffer();
+    } catch {
+      throw new PageServiceError(
+        "That file could not be read as an image — upload a JPEG or PNG photo.",
+        400,
+      );
+    }
+    url = await storage.put(
+      `projects/${page.projectId}/pages/${page.id}/reference-${Date.now()}.jpg`,
+      jpeg,
+      "image/jpeg",
+    );
+  }
+
+  // Best-effort: free the previous reference file straight away.
+  if (page.referenceImage && page.referenceImage !== url) {
+    try {
+      await storage.delete(page.referenceImage);
+    } catch {
+      // Leftovers are swept up by Settings → Free up storage.
+    }
+  }
+
+  const updated = await prisma.colouringPage.update({
+    where: { id: pageId },
+    data: { referenceImage: url },
+  });
+  return pageToDto(updated);
 }
 
 /**
@@ -125,11 +183,25 @@ export async function generatePageImage(pageId: string): Promise<PageDto> {
       }
     }
 
+    // Uploaded reference photo → image-to-image: the provider redraws that
+    // exact photo. The instruction is added per-call, never stored, so the
+    // page prompt stays clean if the reference is later removed.
+    let referenceBytes: Buffer | null = null;
+    if (page.referenceImage) {
+      try {
+        referenceBytes = await getImageStorage().readBytes(page.referenceImage);
+        prompt = `${isCbn ? CBN_REFERENCE_IMAGE_INSTRUCTION : REFERENCE_IMAGE_INSTRUCTION}\n\n${prompt}`;
+      } catch {
+        // Missing file: fall back to prompt-only generation.
+      }
+    }
+
     const provider = getImageProvider();
     const image = await provider.generateImage({
       prompt,
       seed: page.pageNumber,
       variant: isCbn ? "cbn-flat" : "line-art",
+      referenceImage: referenceBytes,
     });
 
     const storage = getImageStorage();
