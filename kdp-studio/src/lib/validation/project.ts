@@ -10,6 +10,7 @@ import {
   MIN_PAGE_COUNT,
   STYLES,
   TARGET_AUDIENCES,
+  VERSE_FONTS,
   VERSE_THEMES,
 } from "@/lib/config/book-options";
 import { TRIM_SIZES } from "@/lib/config/kdp-spec";
@@ -80,6 +81,9 @@ const baseProjectSchema = z.object({
         .max(VERSE_THEMES.length),
       includeVerseText: z.boolean(),
       includeReference: z.boolean(),
+      verseFont: z
+        .enum(VERSE_FONTS.map((f) => f.id) as [string, ...string[]])
+        .default("serif"),
     })
     .optional(),
   targetAudience: z.enum(audienceIds),

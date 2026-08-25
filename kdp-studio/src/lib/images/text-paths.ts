@@ -7,13 +7,21 @@ import { parse as parseFont, type Font } from "opentype.js";
 // from the app's bundled fonts — never as SVG <text>, which needs system
 // fonts at rasterisation time and serverless deploys ship none.
 
-export type TextFace = "sans" | "sans-bold" | "serif" | "serif-bold";
+export type TextFace =
+  | "sans"
+  | "sans-bold"
+  | "serif"
+  | "serif-bold"
+  | "script"
+  | "playful";
 
 const FACE_FILES: Record<TextFace, string> = {
   sans: "LiberationSans-Regular.ttf",
   "sans-bold": "LiberationSans-Bold.ttf",
   serif: "LiberationSerif-Regular.ttf",
   "serif-bold": "LiberationSerif-Bold.ttf",
+  script: "Pacifico-Regular.ttf",
+  playful: "Chewy-Regular.ttf",
 };
 
 const fontCache = new Map<string, Font>();

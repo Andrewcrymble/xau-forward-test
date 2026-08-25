@@ -269,7 +269,14 @@ export async function generatePageImage(pageId: string): Promise<PageDto> {
     let printBytes = result.processed;
     if (page.pageText?.trim()) {
       try {
-        printBytes = await overlayPageText(printBytes, page.pageText);
+        let fontId: string | null = null;
+        try {
+          fontId = (JSON.parse(page.project.bibleSettings || "{}") as { verseFont?: string })
+            .verseFont ?? null;
+        } catch {
+          fontId = null;
+        }
+        printBytes = await overlayPageText(printBytes, page.pageText, fontId);
       } catch (err) {
         console.warn("verse overlay failed, keeping plain page:", err);
       }

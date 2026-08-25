@@ -21,7 +21,9 @@ import {
   PAGE_COUNT_PRESETS,
   STYLES,
   TARGET_AUDIENCES,
+  VERSE_FONTS,
   VERSE_THEMES,
+  verseFont,
 } from "@/lib/config/book-options";
 import { TRIM_SIZES } from "@/lib/config/kdp-spec";
 import {
@@ -293,6 +295,28 @@ export function BookSetupForm({
               />
             </div>
           </div>
+          <Field label="Verse plaque font">
+            <div className="space-y-1.5">
+              <Select
+                value={bible.verseFont ?? "serif"}
+                onChange={(e) => setBible({ verseFont: e.target.value })}
+              >
+                {VERSE_FONTS.map((f) => (
+                  <option key={f.id} value={f.id}>{f.label}</option>
+                ))}
+              </Select>
+              <p
+                className="rounded-lg border border-stone-200 bg-white px-3 py-2 text-center text-lg text-stone-800"
+                style={{ fontFamily: verseFont(bible.verseFont).cssFamily }}
+              >
+                The Lord is my shepherd; I shall not want.
+              </p>
+              <p className="text-[11px] text-stone-500">
+                Used for the typeset verse panel on every page — applies to
+                pages generated from now on.
+              </p>
+            </div>
+          </Field>
           <Field label="Verse themes (choose any)">
             <div className="flex flex-wrap gap-2">
               {VERSE_THEMES.map((t) => {

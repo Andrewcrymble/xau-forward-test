@@ -91,6 +91,27 @@ export const CBN_DIFFICULTIES: OptionDef[] = [
   { id: "detailed_adult", label: "Detailed adult", promptText: "fine detailed regions, around 80–130 regions, none impractically small" },
 ];
 
+/** Typefaces for the typeset verse/quote plaque. cssFamily is the webfont
+ *  used for the on-screen preview; the print faces are bundled TTFs. */
+export const VERSE_FONTS: {
+  id: string;
+  label: string;
+  bodyFace: "serif" | "sans" | "script" | "playful";
+  refFace: "serif-bold" | "sans-bold";
+  cssFamily: string;
+  /** Line-height multiplier — script faces need more breathing room. */
+  lineHeight: number;
+}[] = [
+  { id: "serif", label: "Classic serif", bodyFace: "serif", refFace: "serif-bold", cssFamily: "'Liberation Serif', Georgia, serif", lineHeight: 1.4 },
+  { id: "sans", label: "Clean modern", bodyFace: "sans", refFace: "sans-bold", cssFamily: "'Liberation Sans', Arial, sans-serif", lineHeight: 1.4 },
+  { id: "script", label: "Handwritten script", bodyFace: "script", refFace: "sans-bold", cssFamily: "'Pacifico', cursive", lineHeight: 1.65 },
+  { id: "playful", label: "Playful (great for kids)", bodyFace: "playful", refFace: "sans-bold", cssFamily: "'Chewy', cursive", lineHeight: 1.5 },
+];
+
+export function verseFont(id: string | null | undefined) {
+  return VERSE_FONTS.find((f) => f.id === id) ?? VERSE_FONTS[0];
+}
+
 export const CBN_COLOUR_COUNTS = [4, 5, 6, 8, 10, 12];
 
 export const CBN_KEY_PLACEMENTS: OptionDef[] = [

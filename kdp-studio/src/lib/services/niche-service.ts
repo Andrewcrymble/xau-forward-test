@@ -359,6 +359,7 @@ export async function buildBookFromNiche(
       ? {
           enabled: true,
           translation: "kjv",
+          verseFont: "serif",
           themes: [],
           includeVerseText: true,
           includeReference: true,

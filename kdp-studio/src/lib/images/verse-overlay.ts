@@ -1,5 +1,6 @@
 import sharp from "sharp";
 import { INTERIOR_IMAGE } from "@/lib/config/kdp-spec";
+import { verseFont } from "@/lib/config/book-options";
 import { textPath, textWidth } from "@/lib/images/text-paths";
 
 // Typesets a page's intentional text (a Bible verse, a quote) onto the
@@ -72,14 +73,19 @@ function splitReference(text: string): { body: string; reference: string | null 
   return { body: text.trim(), reference: null };
 }
 
-function wrap(text: string, size: number, maxWidth: number): string[] {
+function wrap(
+  text: string,
+  size: number,
+  maxWidth: number,
+  face: Parameters<typeof textWidth>[2],
+): string[] {
   const lines: string[] = [];
   for (const paragraph of text.split(/\n+/)) {
     const words = paragraph.split(/\s+/).filter(Boolean);
     let line = "";
     for (const word of words) {
       const candidate = line ? `${line} ${word}` : word;
-      if (textWidth(candidate, size, "serif") <= maxWidth || !line) {
+      if (textWidth(candidate, size, face) <= maxWidth || !line) {
         line = candidate;
       } else {
         lines.push(line);
@@ -96,9 +102,14 @@ function wrap(text: string, size: number, maxWidth: number): string[] {
  * original image unchanged if the text is empty; never throws for callers —
  * a failed overlay is worse than a page without its panel, so callers wrap.
  */
-export async function overlayPageText(processed: Buffer, pageText: string): Promise<Buffer> {
+export async function overlayPageText(
+  processed: Buffer,
+  pageText: string,
+  fontId?: string | null,
+): Promise<Buffer> {
   const { body, reference } = splitReference(pageText.trim());
   if (!body && !reference) return processed;
+  const font = verseFont(fontId);
 
   // Fit the plaque inside the artwork's own drawn frame when measurable.
   const bounds = await artworkBounds(processed);
@@ -117,12 +128,12 @@ export async function overlayPageText(processed: Buffer, pageText: string): Prom
 
   const maxTextW = panelW - 2 * PAD;
   let size = 74;
-  let lines = wrap(body, size, maxTextW);
+  let lines = wrap(body, size, maxTextW, font.bodyFace);
   while (lines.length > MAX_LINES && size > 42) {
     size -= 4;
-    lines = wrap(body, size, maxTextW);
+    lines = wrap(body, size, maxTextW, font.bodyFace);
   }
-  const lineH = size * 1.4;
+  const lineH = size * font.lineHeight;
   const refSize = Math.max(40, Math.round(size * 0.7));
   const refBlock = reference ? refSize * 1.9 : 0;
   const panelH = Math.round(PAD * 2 + lines.length * lineH + refBlock);
@@ -137,7 +148,7 @@ export async function overlayPageText(processed: Buffer, pageText: string): Prom
   lines.forEach((line, i) => {
     parts.push(
       textPath(line, cx, panelY + PAD + lineH * (i + 0.5), size, {
-        face: "serif",
+        face: font.bodyFace,
         anchor: "middle",
       }),
     );
@@ -145,7 +156,7 @@ export async function overlayPageText(processed: Buffer, pageText: string): Prom
   if (reference) {
     parts.push(
       textPath(reference, cx, panelY + PAD + lineH * lines.length + refSize * 1.1, refSize, {
-        face: "serif-bold",
+        face: font.refFace,
         anchor: "middle",
       }),
     );

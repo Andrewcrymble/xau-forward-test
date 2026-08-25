@@ -118,6 +118,8 @@ export interface BibleSettings {
   themes: string[];
   includeVerseText: boolean;
   includeReference: boolean;
+  /** Typeface for the typeset verse plaque, from VERSE_FONTS. */
+  verseFont: string;
 }
 
 export const DEFAULT_BIBLE_SETTINGS: BibleSettings = {
@@ -126,6 +128,7 @@ export const DEFAULT_BIBLE_SETTINGS: BibleSettings = {
   themes: [],
   includeVerseText: true,
   includeReference: true,
+  verseFont: "serif",
 };
 
 /** Persistent Book Style Profile — part of the book concept, injected into
