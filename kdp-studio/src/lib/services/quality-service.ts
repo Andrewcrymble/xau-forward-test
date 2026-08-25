@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/db";
 import { PageServiceError } from "@/lib/services/page-service";
 import { COLOURING_PAGE_FORMAT_INSTRUCTION } from "@/lib/config/colouring-rules";
+import { parseBookConcept } from "@/lib/services/project-service";
 
 // BOOK QUALITY CHECK — runs before a book is assembled/exported. Combines
 // the stored per-page validation results (dimensions, colour/grey, margins,
@@ -186,9 +187,16 @@ export async function runBookQualityCheck(projectId: string): Promise<QualityRep
     );
   }
 
-  // Motif over-repetition across concepts.
+  // Motif over-repetition across concepts. Words that are SUPPOSED to
+  // recur — the niche itself, a recurring character's name, the style
+  // profile's chosen motifs — are exempt.
   if (pages.length >= 8) {
-    const nicheWords = new Set(words(`${project.niche} ${project.subNiche ?? ""}`));
+    const bookConcept = parseBookConcept(project.bookConcept);
+    const nicheWords = new Set([
+      ...words(`${project.niche} ${project.subNiche ?? ""}`),
+      ...words(bookConcept?.character?.name ?? ""),
+      ...(bookConcept?.styleProfile?.recurringMotifs ?? []).flatMap((m) => words(m)),
+    ]);
     const counts = new Map<string, number>();
     for (const p of pages) {
       for (const w of new Set(words(p.concept))) {

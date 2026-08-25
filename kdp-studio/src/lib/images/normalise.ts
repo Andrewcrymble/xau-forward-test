@@ -114,11 +114,23 @@ export async function normaliseToPrintCanvas(input: Buffer): Promise<NormaliseRe
       ["left", { left: 0, top: 0, width: stripW, height }],
       ["right", { left: width - stripW, top: 0, width: stripW, height }],
     ];
+    const edgeMeans: Array<[string, number]> = [];
     for (const [edge, region] of regions) {
       const s = await flat.clone().extract(region).stats();
       const mean =
         s.channels.slice(0, 3).reduce((acc, c) => acc + c.mean, 0) / 3;
-      if (mean < 235) {
+      edgeMeans.push([edge, mean]);
+    }
+    const touched = edgeMeans.filter(([, m]) => m < 235);
+    const touchedMeans = touched.map(([, m]) => m);
+    // All four edges evenly inked = a deliberate decorative border frame,
+    // which is fine: the print canvas adds the safe margin around it. Only
+    // uneven edge contact suggests a subject accidentally cut off.
+    const uniformFrame =
+      touched.length === 4 &&
+      Math.max(...touchedMeans) - Math.min(...touchedMeans) < 25;
+    if (!uniformFrame) {
+      for (const [edge, mean] of touched) {
         issues.push(`Artwork may touch the ${edge} edge (edge brightness ${mean.toFixed(0)}/255)`);
       }
     }
