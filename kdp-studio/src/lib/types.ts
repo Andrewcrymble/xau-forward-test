@@ -387,10 +387,51 @@ export interface NicheIdeaDto {
   seriesPotential: string | null;
   scores: NicheScores | null;
   seriesIdeas: NicheSeriesIdea | null;
+  /** Hand-gathered Amazon research (user-observed BSR/price of top results).
+   *  Sales figures shown in the UI are derived ESTIMATES; only what the user
+   *  actually observed is stored. */
+  marketData: NicheMarketData | null;
   status: NicheStatus;
   parentId: string | null;
   linkedProjectId: string | null;
   createdAt: string;
+}
+
+/** One observed Amazon search result: public BSR and price from its page. */
+export interface MarketEntry {
+  bsr: number;
+  price: number | null;
+}
+
+/** Hand-gathered Amazon research (user-observed public figures only). */
+export interface AmazonResearch {
+  market: "amazon_com" | "amazon_co_uk";
+  entries: MarketEntry[];
+  /** Free-text note, e.g. the search phrase used or result count seen. */
+  note: string | null;
+  capturedAt: string;
+}
+
+/** Live Etsy market scan fetched from Etsy's official Open API. */
+export interface EtsyScan {
+  query: string;
+  /** Total active listings Etsy reports for the search. */
+  activeListings: number;
+  /** How many top listings were sampled for the stats below. */
+  sampled: number;
+  currency: string | null;
+  priceMin: number | null;
+  priceMedian: number | null;
+  priceMax: number | null;
+  avgFavourites: number | null;
+  /** Top shops in the results with their lifetime total sales (shop-level). */
+  topShops: { name: string; sales: number }[];
+  capturedAt: string;
+}
+
+export interface NicheMarketData {
+  amazon?: AmazonResearch | null;
+  etsy?: EtsyScan | null;
 }
 
 /** Standard typed API envelope used by every API route. */

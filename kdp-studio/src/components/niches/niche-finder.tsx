@@ -362,6 +362,9 @@ export function NicheFinder({ initialIdeas }: { initialIdeas: NicheIdeaDto[] }) 
             onSeries={makeSeries}
             onBuild={(i) => buildBook(i)}
             onDelete={removeIdea}
+            onUpdated={(updated) =>
+              setIdeas((prev) => prev.map((n) => (n.id === updated.id ? updated : n)))
+            }
           />
         ))}
       </div>

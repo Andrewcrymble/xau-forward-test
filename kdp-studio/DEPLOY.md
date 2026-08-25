@@ -107,3 +107,23 @@ Git** you can point production at `claude/kdp-colouring-book-studio-1s7szl`
 - **Alternative hosts:** anything that runs Next.js + Postgres works
   (Railway, Render, Fly.io). Vercel is recommended because deploys are
   automatic from GitHub with zero terminal use.
+
+## Etsy market scans (optional, free)
+
+The Niche Finder's "Scan Etsy market" button pulls live competition data
+(active listing counts, price range, favourites, top shops' lifetime sales)
+from Etsy's official Open API. It needs a free personal API key:
+
+1. Sign in to Etsy, then open https://www.etsy.com/developers/register
+2. Create a new app — name it anything (e.g. "KDP Studio research"),
+   describe it as "personal market research", and agree to the terms.
+   Personal apps get instant provisional access, which is all this needs.
+3. On the app's page copy the **KEYSTRING** value.
+4. In GitHub: repository → Settings → Secrets and variables → Actions →
+   New repository secret. Name: `ETSY_API_KEY`, value: the keystring.
+5. Re-run the "Deploy KDP Studio to Vercel" workflow (Actions tab →
+   Run workflow) so the key syncs to Vercel.
+
+Without the key everything else still works — the scan button just explains
+what's missing. The Amazon research panel needs no key at all: it generates
+the search links and estimates sales from the BSR numbers you type in.

@@ -1,12 +1,38 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { deleteNicheIdea, updateNicheStatus } from "@/lib/services/niche-service";
+import {
+  deleteNicheIdea,
+  saveNicheAmazonResearch,
+  updateNicheStatus,
+} from "@/lib/services/niche-service";
 import { apiError } from "@/lib/api-helpers";
 import { NICHE_STATUSES, type ApiResponse, type NicheIdeaDto } from "@/lib/types";
 
 type Ctx = { params: Promise<{ nicheId: string }> };
 
-const bodySchema = z.object({ status: z.enum(NICHE_STATUSES) });
+const amazonResearchSchema = z.object({
+  market: z.enum(["amazon_com", "amazon_co_uk"]),
+  entries: z
+    .array(
+      z.object({
+        bsr: z.number().int().min(1).max(50_000_000),
+        price: z.number().min(0).max(1000).nullable(),
+      }),
+    )
+    .min(1)
+    .max(8),
+  note: z.string().trim().max(300).nullish(),
+});
+
+const bodySchema = z
+  .object({
+    status: z.enum(NICHE_STATUSES),
+    amazonResearch: amazonResearchSchema.nullable(),
+  })
+  .partial()
+  .refine((b) => b.status !== undefined || b.amazonResearch !== undefined, {
+    message: "Provide status or amazonResearch",
+  });
 
 export async function PATCH(
   req: NextRequest,
@@ -27,10 +53,14 @@ export async function PATCH(
     );
   }
   try {
-    return NextResponse.json({
-      ok: true,
-      data: await updateNicheStatus(nicheId, parsed.data.status),
-    });
+    let updated: NicheIdeaDto | null = null;
+    if (parsed.data.amazonResearch !== undefined) {
+      updated = await saveNicheAmazonResearch(nicheId, parsed.data.amazonResearch);
+    }
+    if (parsed.data.status !== undefined) {
+      updated = await updateNicheStatus(nicheId, parsed.data.status);
+    }
+    return NextResponse.json({ ok: true, data: updated! });
   } catch (err) {
     return apiError(`PATCH /api/niches/${nicheId}`, err);
   }

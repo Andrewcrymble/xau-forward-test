@@ -12,6 +12,8 @@ import {
   COLOURING_MODES,
   DEFAULT_INTERIOR_OPTIONS,
   type NicheIdeaDto,
+  type AmazonResearch,
+  type NicheMarketData,
   type NicheScores,
   type NicheSeriesIdea,
   type NicheStatus,
@@ -51,6 +53,7 @@ function toDto(row: NicheIdea): NicheIdeaDto {
     seriesPotential: row.seriesPotential,
     scores: parseJsonOr<NicheScores | null>(row.scores, null),
     seriesIdeas: parseJsonOr<NicheSeriesIdea | null>(row.seriesIdeas, null),
+    marketData: parseJsonOr<NicheMarketData | null>(row.marketData, null),
     status: row.status as NicheStatus,
     parentId: row.parentId,
     linkedProjectId: row.linkedProjectId,
@@ -169,6 +172,44 @@ export async function updateNicheStatus(
     .catch(() => null);
   if (!row) throw new PageServiceError("Niche idea not found", 404);
   return toDto(row);
+}
+
+/** Merge one channel's research into the niche's marketData JSON. */
+export async function mergeNicheMarketData(
+  id: string,
+  patch: Partial<NicheMarketData>,
+): Promise<NicheIdeaDto> {
+  const existing = await prisma.nicheIdea.findUnique({ where: { id } });
+  if (!existing) throw new PageServiceError("Niche idea not found", 404);
+  const current = parseJsonOr<NicheMarketData | null>(existing.marketData, null) ?? {};
+  const next: NicheMarketData = { ...current, ...patch };
+  const empty = !next.amazon && !next.etsy;
+  const row = await prisma.nicheIdea.update({
+    where: { id },
+    data: { marketData: empty ? null : JSON.stringify(next) },
+  });
+  return toDto(row);
+}
+
+/** Store the user's hand-gathered Amazon research (observed BSR/price only —
+ *  estimates are always derived at display time, never stored). */
+export async function saveNicheAmazonResearch(
+  id: string,
+  data: {
+    market: AmazonResearch["market"];
+    entries: AmazonResearch["entries"];
+    note?: string | null;
+  } | null,
+): Promise<NicheIdeaDto> {
+  const stored: AmazonResearch | null = data
+    ? {
+        market: data.market,
+        entries: data.entries.slice(0, 8),
+        note: data.note?.trim() || null,
+        capturedAt: new Date().toISOString(),
+      }
+    : null;
+  return mergeNicheMarketData(id, { amazon: stored });
 }
 
 export async function deleteNicheIdea(id: string): Promise<void> {

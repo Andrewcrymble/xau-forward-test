@@ -8,6 +8,7 @@ import { useState } from "react";
 import Link from "next/link";
 import type { NicheIdeaDto, NicheStatus } from "@/lib/types";
 import { Button } from "@/components/ui";
+import { MarketResearchPanel } from "@/components/niches/market-research-panel";
 
 const SCORE_LABELS: [keyof NonNullable<NicheIdeaDto["scores"]>, string][] = [
   ["specificity", "Specificity"],
@@ -37,6 +38,7 @@ export function NicheCard({
   onSeries,
   onBuild,
   onDelete,
+  onUpdated,
 }: {
   idea: NicheIdeaDto;
   busy: boolean;
@@ -46,8 +48,10 @@ export function NicheCard({
   onSeries: (idea: NicheIdeaDto) => void;
   onBuild: (idea: NicheIdeaDto) => void;
   onDelete: (id: string) => Promise<void>;
+  onUpdated: (updated: NicheIdeaDto) => void;
 }) {
   const [expanded, setExpanded] = useState(false);
+  const [research, setResearch] = useState(false);
   const s = idea.scores;
 
   const statusBtn = (status: NicheStatus, label: string, title: string) => (
@@ -158,6 +162,14 @@ export function NicheCard({
         <button type="button" className={actionBtn} onClick={() => setExpanded((v) => !v)}>
           {expanded ? "Hide scores" : "Scores"}
         </button>
+        <button
+          type="button"
+          className={`${actionBtn} ${idea.marketData ? "border-amber-300 bg-amber-50 text-amber-800" : ""}`}
+          onClick={() => setResearch((v) => !v)}
+          title="Amazon links + BSR estimator and live Etsy market scan"
+        >
+          {research ? "Hide research" : idea.marketData ? "Research ✓" : "Research"}
+        </button>
         <button type="button" className={actionBtn} disabled={busy} onClick={() => onGoDeeper(idea)}>
           Go deeper
         </button>
@@ -177,6 +189,7 @@ export function NicheCard({
           ✕
         </button>
       </div>
+      {research && <MarketResearchPanel idea={idea} onUpdated={onUpdated} />}
       <div className="mt-2">
         {idea.linkedProjectId ? (
           <Link

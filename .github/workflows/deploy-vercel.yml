@@ -56,6 +56,8 @@ jobs:
           R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
           R2_BUCKET: ${{ secrets.R2_BUCKET }}
           R2_PUBLIC_BASE_URL: ${{ secrets.R2_PUBLIC_BASE_URL }}
+          # Optional: enables the live Etsy market scan in the Niche Finder.
+          ETSY_API_KEY: ${{ secrets.ETSY_API_KEY }}
         run: |
           set -e
           # Keep KDP Studio in its own Postgres schema so it can never touch
@@ -83,6 +85,7 @@ jobs:
           sync_env R2_SECRET_ACCESS_KEY "$R2_SECRET_ACCESS_KEY"
           sync_env R2_BUCKET "$R2_BUCKET"
           sync_env R2_PUBLIC_BASE_URL "$R2_PUBLIC_BASE_URL"
+          sync_env ETSY_API_KEY "$ETSY_API_KEY"
 
       - name: Ensure Blob storage for generated artwork
         continue-on-error: true
