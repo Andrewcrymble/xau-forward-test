@@ -133,6 +133,31 @@ export function ExportScreen({
   const download = result?.url ?? r.latestPackage?.url ?? null;
   const etsyDownload = etsyResult?.url ?? r.latestEtsyPack?.url ?? null;
 
+  const oneDriveNote = (od: PackageBuildResult["oneDrive"] | undefined) => {
+    if (!od) return null;
+    if (od.status === "uploaded") {
+      return (
+        <p className="text-xs text-emerald-700">
+          ✓ Saved to OneDrive: {od.path}
+        </p>
+      );
+    }
+    if (od.status === "error") {
+      return (
+        <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+          OneDrive save failed: {od.error} — the download link above still
+          works.
+        </p>
+      );
+    }
+    return (
+      <p className="text-xs text-stone-400">
+        Auto-save to OneDrive is off — add the OneDrive secrets (see the
+        DEPLOY guide) to file every package automatically.
+      </p>
+    );
+  };
+
   return (
     <div className="space-y-5">
       <Card className="space-y-3">
@@ -283,6 +308,7 @@ export function ExportScreen({
               {(result.bytes / 1024 / 1024).toFixed(1)} MB — tap Download above.
             </p>
           )}
+          {oneDriveNote(result?.oneDrive)}
           {!result && r.latestPackage && (
             <p className="text-xs text-stone-500">
               Last packaged {new Date(r.latestPackage.builtAt).toLocaleString()}
@@ -341,6 +367,7 @@ export function ExportScreen({
             {(etsyResult.bytes / 1024 / 1024).toFixed(1)} MB — tap Download above.
           </p>
         )}
+        {oneDriveNote(etsyResult?.oneDrive)}
         {!etsyResult && r.latestEtsyPack && (
           <p className="text-xs text-stone-500">
             Last packed {new Date(r.latestEtsyPack.builtAt).toLocaleString()}

@@ -10,6 +10,10 @@ import {
 } from "@/lib/services/interior-service";
 import { buildCover, latestCoverExport } from "@/lib/services/cover-service";
 import { getListing } from "@/lib/services/listing-service";
+import {
+  uploadToOneDrive,
+  type OneDriveUploadResult,
+} from "@/lib/services/onedrive-service";
 import type { ListingContent } from "@/lib/types";
 
 // Phase 7: the complete KDP package.
@@ -164,6 +168,8 @@ export interface PackageBuildResult {
   builtAt: string;
   contents: string[];
   imageCount: number;
+  /** Automatic OneDrive delivery outcome (when configured). */
+  oneDrive: OneDriveUploadResult;
 }
 
 /**
@@ -220,8 +226,9 @@ export async function buildEtsyPack(projectId: string): Promise<PackageBuildResu
   const buffer = await zip.generateAsync({ type: "nodebuffer", compression: "STORE" });
   const buildNumber =
     (await prisma.export.count({ where: { projectId, type: "etsy_pack" } })) + 1;
+  const filename = `${slug}-etsy-pack-v${buildNumber}.zip`;
   const url = await storage.put(
-    `projects/${projectId}/exports/${slug}-etsy-pack-v${buildNumber}.zip`,
+    `projects/${projectId}/exports/${filename}`,
     buffer,
     "application/zip",
   );
@@ -229,6 +236,7 @@ export async function buildEtsyPack(projectId: string): Promise<PackageBuildResu
     data: { projectId, type: "etsy_pack", filePath: url },
   });
   await pruneOldExports(projectId);
+  const oneDrive = await uploadToOneDrive(project.name, filename, buffer);
 
   return {
     url,
@@ -236,6 +244,7 @@ export async function buildEtsyPack(projectId: string): Promise<PackageBuildResu
     builtAt: row.createdAt.toISOString(),
     contents,
     imageCount: approvedPages.length,
+    oneDrive,
   };
 }
 
@@ -335,8 +344,9 @@ export async function buildKdpPackage(projectId: string): Promise<PackageBuildRe
 
   const buildNumber =
     (await prisma.export.count({ where: { projectId, type: "kdp_package" } })) + 1;
+  const filename = `${slug}-kdp-package-v${buildNumber}.zip`;
   const url = await storage.put(
-    `projects/${projectId}/exports/${slug}-kdp-package-v${buildNumber}.zip`,
+    `projects/${projectId}/exports/${filename}`,
     buffer,
     "application/zip",
   );
@@ -348,6 +358,7 @@ export async function buildKdpPackage(projectId: string): Promise<PackageBuildRe
     where: { id: projectId },
     data: { status: "complete" },
   });
+  const oneDrive = await uploadToOneDrive(project.name, filename, buffer);
 
   return {
     url,
@@ -355,5 +366,6 @@ export async function buildKdpPackage(projectId: string): Promise<PackageBuildRe
     builtAt: row.createdAt.toISOString(),
     contents,
     imageCount: approvedPages.length,
+    oneDrive,
   };
 }

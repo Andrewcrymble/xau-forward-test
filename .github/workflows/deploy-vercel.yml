@@ -58,6 +58,14 @@ jobs:
           R2_PUBLIC_BASE_URL: ${{ secrets.R2_PUBLIC_BASE_URL }}
           # Optional: enables the live Etsy market scan in the Niche Finder.
           ETSY_API_KEY: ${{ secrets.ETSY_API_KEY }}
+          # Optional: automatic OneDrive delivery of finished packages
+          # (Azure app registration with application-permission
+          # Files.ReadWrite.All — see DEPLOY.md).
+          MS_TENANT_ID: ${{ secrets.MS_TENANT_ID }}
+          MS_CLIENT_ID: ${{ secrets.MS_CLIENT_ID }}
+          MS_CLIENT_SECRET: ${{ secrets.MS_CLIENT_SECRET }}
+          ONEDRIVE_USER: ${{ secrets.ONEDRIVE_USER }}
+          ONEDRIVE_BASE_PATH: ${{ secrets.ONEDRIVE_BASE_PATH }}
         run: |
           set -e
           # Keep KDP Studio in its own Postgres schema so it can never touch
@@ -86,6 +94,11 @@ jobs:
           sync_env R2_BUCKET "$R2_BUCKET"
           sync_env R2_PUBLIC_BASE_URL "$R2_PUBLIC_BASE_URL"
           sync_env ETSY_API_KEY "$ETSY_API_KEY"
+          sync_env MS_TENANT_ID "$MS_TENANT_ID"
+          sync_env MS_CLIENT_ID "$MS_CLIENT_ID"
+          sync_env MS_CLIENT_SECRET "$MS_CLIENT_SECRET"
+          sync_env ONEDRIVE_USER "$ONEDRIVE_USER"
+          sync_env ONEDRIVE_BASE_PATH "$ONEDRIVE_BASE_PATH"
 
       - name: Ensure Blob storage for generated artwork
         continue-on-error: true

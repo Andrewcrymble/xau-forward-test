@@ -127,3 +127,37 @@ from Etsy's official Open API. It needs a free personal API key:
 Without the key everything else still works — the scan button just explains
 what's missing. The Amazon research panel needs no key at all: it generates
 the search links and estimates sales from the BSR numbers you type in.
+
+## Automatic OneDrive delivery (optional)
+
+When configured, every "Download Complete KDP Package" and "Build Etsy
+Printable Pack" also uploads the ZIP to OneDrive under
+`Business/ColourJoy/<book name>/` — no taps needed. Setup is a one-time
+Azure app registration (server-to-server; no sign-in screens afterwards):
+
+1. Open https://portal.azure.com and sign in with the SAME Microsoft
+   account as the OneDrive (e.g. andrew@…).
+2. Search "App registrations" → **New registration**:
+   - Name: `KDP Studio OneDrive`
+   - Supported account types: **Accounts in this organizational directory
+     only** (single tenant)
+   - Redirect URI: leave empty → **Register**
+3. On the app's Overview page copy two values:
+   - **Application (client) ID** → GitHub secret `MS_CLIENT_ID`
+   - **Directory (tenant) ID**  → GitHub secret `MS_TENANT_ID`
+4. Left menu **Certificates & secrets** → **New client secret** →
+   Add → copy the secret **Value** immediately (it hides later)
+   → GitHub secret `MS_CLIENT_SECRET`
+5. Left menu **API permissions** → **Add a permission** →
+   **Microsoft Graph** → **Application permissions** → search
+   `Files.ReadWrite.All` → tick it → Add permissions.
+   Then press **Grant admin consent for <your org>** and confirm —
+   the Status column must show a green tick.
+6. Two more GitHub secrets:
+   - `ONEDRIVE_USER` — the OneDrive owner's sign-in address
+   - `ONEDRIVE_BASE_PATH` — optional; defaults to `Business/ColourJoy`
+7. Re-run the "Deploy KDP Studio to Vercel" workflow so the values sync.
+
+The Export tab reports the outcome after every build: "Saved to
+OneDrive: …" on success, or the exact Microsoft error if something is
+misconfigured (the download link always still works either way).
