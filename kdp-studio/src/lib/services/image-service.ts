@@ -17,7 +17,7 @@ import {
   audiencePromptText,
   stylePromptText,
 } from "@/lib/config/book-options";
-import { PageServiceError } from "@/lib/services/page-service";
+import { composePrompt, PageServiceError } from "@/lib/services/page-service";
 import { parseBookConcept } from "@/lib/services/project-service";
 import { DEFAULT_CBN_SETTINGS, type CbnSettings, type PageDto } from "@/lib/types";
 
@@ -173,6 +173,30 @@ export async function generatePageImage(pageId: string): Promise<PageDto> {
     // (stored back to the page for transparency unless the user owns it).
     let prompt = page.prompt;
     let cbnSettings: CbnSettings | null = null;
+    if (!isCbn && !page.promptEdited) {
+      // Un-edited prompts are rebuilt at generation time so every
+      // (re)generation uses the CURRENT prompt rules — stored plan-time
+      // prompts otherwise fossilise old instructions (e.g. the retired
+      // "render this text" block that made the AI draw garbled verses).
+      const siblings = await prisma.colouringPage.findMany({
+        where: { projectId: page.projectId, NOT: { id: pageId } },
+        select: { title: true },
+        orderBy: { pageNumber: "asc" },
+        take: 40,
+      });
+      prompt = composePrompt(
+        page.project,
+        page.concept,
+        siblings.map((s) => s.title),
+        page.pageText,
+      );
+      if (prompt !== page.prompt) {
+        await prisma.colouringPage.update({
+          where: { id: pageId },
+          data: { prompt },
+        });
+      }
+    }
     if (isCbn) {
       cbnSettings = parseCbnSettings(page.project.cbnSettings);
       if (!page.promptEdited) {

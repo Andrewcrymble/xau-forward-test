@@ -118,7 +118,7 @@ function parseCbn(project: ProjectForPrompts): CbnSettings {
   }
 }
 
-function composePrompt(
+export function composePrompt(
   project: ProjectForPrompts,
   concept: string,
   siblingTitles: string[],
