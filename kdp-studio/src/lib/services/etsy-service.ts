@@ -114,6 +114,39 @@ export async function scanEtsyMarket(nicheId: string): Promise<NicheIdeaDto> {
       ? Math.round(favs.reduce((a, b) => a + b, 0) / favs.length)
       : null,
     topShops,
+    source: "api",
+    capturedAt: new Date().toISOString(),
+  };
+  return mergeNicheMarketData(nicheId, { etsy: scan });
+}
+
+/** Store Etsy figures the user read off Etsy's public pages — the no-API-key
+ *  fallback. Only what they observed is stored, marked source "manual". */
+export async function saveManualEtsyResearch(
+  nicheId: string,
+  input: {
+    activeListings: number;
+    priceMin?: number | null;
+    priceMax?: number | null;
+    currency?: string | null;
+    topShops?: { name: string; sales: number }[];
+    note?: string | null;
+  } | null,
+): Promise<NicheIdeaDto> {
+  if (input === null) return mergeNicheMarketData(nicheId, { etsy: null });
+  const idea = await prisma.nicheIdea.findUnique({ where: { id: nicheId } });
+  if (!idea) throw new PageServiceError("Niche idea not found", 404);
+  const scan: EtsyScan = {
+    query: input.note?.trim() || etsyQuery(idea.name),
+    activeListings: input.activeListings,
+    sampled: 0,
+    currency: input.currency?.trim() || null,
+    priceMin: input.priceMin ?? null,
+    priceMedian: null,
+    priceMax: input.priceMax ?? null,
+    avgFavourites: null,
+    topShops: (input.topShops ?? []).slice(0, 5),
+    source: "manual",
     capturedAt: new Date().toISOString(),
   };
   return mergeNicheMarketData(nicheId, { etsy: scan });

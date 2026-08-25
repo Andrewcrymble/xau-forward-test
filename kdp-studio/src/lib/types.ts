@@ -426,6 +426,9 @@ export interface EtsyScan {
   avgFavourites: number | null;
   /** Top shops in the results with their lifetime total sales (shop-level). */
   topShops: { name: string; sales: number }[];
+  /** "api" = fetched live from Etsy's Open API; "manual" = figures the user
+   *  read off Etsy's public pages themselves. Older records default to api. */
+  source?: "api" | "manual";
   capturedAt: string;
 }
 

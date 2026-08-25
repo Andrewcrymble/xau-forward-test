@@ -34,6 +34,54 @@ export function MarketResearchPanel({
   const etsy = idea.marketData?.etsy ?? null;
   const [etsyBusy, setEtsyBusy] = useState(false);
   const [etsyError, setEtsyError] = useState<string | null>(null);
+  const [etsyManualOpen, setEtsyManualOpen] = useState(false);
+  const [em, setEm] = useState({
+    listings: "",
+    priceMin: "",
+    priceMax: "",
+    shopName: "",
+    shopSales: "",
+  });
+
+  const etsySearchLink = `https://www.etsy.com/search?q=${encodeURIComponent(
+    `${idea.name.replace(/colou?ring\s*(book|books|pages)?/gi, "").trim()} coloring pages`,
+  )}`;
+
+  const saveEtsyManual = async () => {
+    const listings = parseInt(em.listings.replace(/[,.\s]/g, ""), 10);
+    if (!Number.isFinite(listings)) {
+      setEtsyError("Enter at least the number of results Etsy shows.");
+      return;
+    }
+    setEtsyBusy(true);
+    setEtsyError(null);
+    try {
+      const shopSales = parseInt(em.shopSales.replace(/[,.\s]/g, ""), 10);
+      const res = await fetch(`/api/niches/${idea.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          etsyManual: {
+            activeListings: listings,
+            priceMin: parseFloat(em.priceMin) || null,
+            priceMax: parseFloat(em.priceMax) || null,
+            topShops:
+              em.shopName.trim() && Number.isFinite(shopSales)
+                ? [{ name: em.shopName.trim(), sales: shopSales }]
+                : [],
+          },
+        }),
+      });
+      const json: ApiResponse<NicheIdeaDto> = await res.json();
+      if (!json.ok) throw new Error(json.error);
+      onUpdated(json.data);
+      setEtsyManualOpen(false);
+    } catch (err) {
+      setEtsyError(err instanceof Error ? err.message : "Could not save");
+    } finally {
+      setEtsyBusy(false);
+    }
+  };
 
   const scanEtsy = async () => {
     setEtsyBusy(true);
@@ -184,19 +232,66 @@ export function MarketResearchPanel({
         <div className="flex flex-wrap items-center gap-2">
           <p className="text-xs font-semibold text-amber-900">Etsy market scan</p>
           <Button variant="secondary" disabled={etsyBusy} onClick={scanEtsy}>
-            {etsyBusy ? "Scanning…" : etsy ? "Re-scan Etsy" : "Scan Etsy market"}
+            {etsyBusy ? "Scanning…" : etsy?.source !== "manual" && etsy ? "Re-scan Etsy" : "Scan Etsy market"}
           </Button>
+          <a
+            href={etsySearchLink}
+            target="_blank"
+            rel="noreferrer"
+            className="rounded-md border border-amber-300 bg-white px-2.5 py-1 text-xs font-semibold text-amber-900 hover:bg-amber-100"
+          >
+            Search Etsy ↗
+          </a>
+          <button
+            type="button"
+            onClick={() => setEtsyManualOpen((v) => !v)}
+            className="text-[11px] font-semibold text-amber-800 underline underline-offset-2"
+          >
+            {etsyManualOpen ? "Hide manual entry" : "No API key? Enter manually"}
+          </button>
         </div>
+        {etsyManualOpen && (
+          <div className="space-y-1.5 rounded-md border border-amber-200 bg-white/70 p-2">
+            <p className="text-[11px] text-amber-800">
+              Open the Etsy search above and copy what you see: the results
+              count at the top, the typical price range, and (optional) tap a
+              top shop — its total sales show under the shop name.
+            </p>
+            <div className="grid grid-cols-3 gap-1.5">
+              <input inputMode="numeric" placeholder="Results count" value={em.listings}
+                onChange={(e) => setEm((p) => ({ ...p, listings: e.target.value }))}
+                className="rounded-md border border-amber-200 bg-white px-2 py-1 text-xs" />
+              <input inputMode="decimal" placeholder="Price from" value={em.priceMin}
+                onChange={(e) => setEm((p) => ({ ...p, priceMin: e.target.value }))}
+                className="rounded-md border border-amber-200 bg-white px-2 py-1 text-xs" />
+              <input inputMode="decimal" placeholder="Price to" value={em.priceMax}
+                onChange={(e) => setEm((p) => ({ ...p, priceMax: e.target.value }))}
+                className="rounded-md border border-amber-200 bg-white px-2 py-1 text-xs" />
+            </div>
+            <div className="grid grid-cols-[2fr_1fr_auto] items-center gap-1.5">
+              <input placeholder="Top shop name (optional)" value={em.shopName}
+                onChange={(e) => setEm((p) => ({ ...p, shopName: e.target.value }))}
+                className="rounded-md border border-amber-200 bg-white px-2 py-1 text-xs" />
+              <input inputMode="numeric" placeholder="Its sales" value={em.shopSales}
+                onChange={(e) => setEm((p) => ({ ...p, shopSales: e.target.value }))}
+                className="rounded-md border border-amber-200 bg-white px-2 py-1 text-xs" />
+              <Button variant="secondary" disabled={etsyBusy} onClick={saveEtsyManual}>
+                Save
+              </Button>
+            </div>
+          </div>
+        )}
         {etsy && (
           <div className="space-y-1 text-xs text-stone-700">
             <p>
               <strong>{etsy.activeListings.toLocaleString()}</strong> active listings for
               &ldquo;{etsy.query}&rdquo;
-              {etsy.priceMedian != null && (
+              {etsy.priceMin != null && (
                 <>
                   {" "}
-                  · prices {etsy.priceMin?.toFixed(2)}–{etsy.priceMax?.toFixed(2)}{" "}
-                  {etsy.currency} (median {etsy.priceMedian.toFixed(2)})
+                  · prices {etsy.priceMin.toFixed(2)}–{etsy.priceMax?.toFixed(2)}
+                  {etsy.currency ? ` ${etsy.currency}` : ""}
+                  {etsy.priceMedian != null && <> (median {etsy.priceMedian.toFixed(2)})</>}
                 </>
               )}
               {etsy.avgFavourites != null && <> · avg {etsy.avgFavourites} favourites</>}
@@ -210,7 +305,9 @@ export function MarketResearchPanel({
               </p>
             )}
             <p className="text-[10px] text-amber-700">
-              Live data from Etsy&apos;s official API, captured{" "}
+              {etsy.source === "manual"
+                ? "Figures you read off Etsy's public pages, saved "
+                : "Live data from Etsy's official API, captured "}
               {new Date(etsy.capturedAt).toLocaleString()}. Shop sales are
               whole-shop lifetime totals — Etsy publishes no per-listing sales.
             </p>

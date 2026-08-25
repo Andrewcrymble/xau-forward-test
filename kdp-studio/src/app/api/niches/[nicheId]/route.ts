@@ -5,6 +5,7 @@ import {
   saveNicheAmazonResearch,
   updateNicheStatus,
 } from "@/lib/services/niche-service";
+import { saveManualEtsyResearch } from "@/lib/services/etsy-service";
 import { apiError } from "@/lib/api-helpers";
 import { NICHE_STATUSES, type ApiResponse, type NicheIdeaDto } from "@/lib/types";
 
@@ -24,15 +25,32 @@ const amazonResearchSchema = z.object({
   note: z.string().trim().max(300).nullish(),
 });
 
+const etsyManualSchema = z.object({
+  activeListings: z.number().int().min(0).max(100_000_000),
+  priceMin: z.number().min(0).max(10_000).nullish(),
+  priceMax: z.number().min(0).max(10_000).nullish(),
+  currency: z.string().trim().max(8).nullish(),
+  topShops: z
+    .array(z.object({ name: z.string().trim().max(80), sales: z.number().int().min(0) }))
+    .max(5)
+    .optional(),
+  note: z.string().trim().max(300).nullish(),
+});
+
 const bodySchema = z
   .object({
     status: z.enum(NICHE_STATUSES),
     amazonResearch: amazonResearchSchema.nullable(),
+    etsyManual: etsyManualSchema.nullable(),
   })
   .partial()
-  .refine((b) => b.status !== undefined || b.amazonResearch !== undefined, {
-    message: "Provide status or amazonResearch",
-  });
+  .refine(
+    (b) =>
+      b.status !== undefined ||
+      b.amazonResearch !== undefined ||
+      b.etsyManual !== undefined,
+    { message: "Provide status, amazonResearch or etsyManual" },
+  );
 
 export async function PATCH(
   req: NextRequest,
@@ -56,6 +74,9 @@ export async function PATCH(
     let updated: NicheIdeaDto | null = null;
     if (parsed.data.amazonResearch !== undefined) {
       updated = await saveNicheAmazonResearch(nicheId, parsed.data.amazonResearch);
+    }
+    if (parsed.data.etsyManual !== undefined) {
+      updated = await saveManualEtsyResearch(nicheId, parsed.data.etsyManual);
     }
     if (parsed.data.status !== undefined) {
       updated = await updateNicheStatus(nicheId, parsed.data.status);
