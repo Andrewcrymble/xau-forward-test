@@ -14,6 +14,15 @@ export const listingContentSchema = z.object({
   audience: z.string().trim().max(1000),
   backCoverDescription: z.string().trim().max(2000),
   shortPromo: z.string().trim().max(500),
+  authorNote: z.string().trim().max(2000).default(""),
+  insideBook: z.array(z.string().trim().max(300)).max(8).default([]),
+  launchPlan: z.array(z.string().trim().max(500)).max(7).default([]),
+  etsyTitle: z.string().trim().max(140, "Etsy titles are limited to 140 characters").default(""),
+  etsyTags: z
+    .array(z.string().trim().max(20, "Etsy tags are limited to 20 characters"))
+    .max(13, "Etsy allows up to 13 tags")
+    .default([]),
+  etsyDescription: z.string().trim().max(5000).default(""),
 });
 
 export const listingUpdateSchema = listingContentSchema.partial();

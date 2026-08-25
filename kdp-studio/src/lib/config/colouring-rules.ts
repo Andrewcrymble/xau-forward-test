@@ -32,7 +32,7 @@ export const COLOURING_PAGE_MASTER_RULES = [
   "Match line complexity to the target age/audience.",
 ] as const;
 
-import type { BookStyleProfile } from "@/lib/types";
+import type { BookStyleProfile, RecurringCharacter } from "@/lib/types";
 
 export interface PagePromptContext {
   /** Project style instruction (resolved preset text or custom style). */
@@ -49,6 +49,8 @@ export interface PagePromptContext {
   creativeBrief?: string | null;
   /** Persistent Book Style Profile — included so every page matches. */
   styleProfile?: BookStyleProfile | null;
+  /** Recurring main character locked across the whole book. */
+  character?: RecurringCharacter | null;
   /** Text intentionally part of the artwork (e.g. a Bible verse + reference). */
   pageText?: string | null;
   /** Short titles/summaries of previously planned pages, for de-duplication. */
@@ -87,6 +89,18 @@ export interface CbnPromptContext {
   paletteDescription?: string | null;
   creativeBrief?: string | null;
   styleProfile?: BookStyleProfile | null;
+  character?: RecurringCharacter | null;
+}
+
+/** Locks a recurring character's look so every appearance matches. */
+function characterSection(c: RecurringCharacter): string {
+  return [
+    `RECURRING CHARACTER — when ${c.name} appears in this scene, draw them EXACTLY consistently with every other page:`,
+    `- ${c.name}: ${c.description}`,
+    ...c.signatureDetails.map((d) => `- Signature detail (always identical): ${d}`),
+    ...(c.props.length > 0 ? [`- Recurring props that may appear: ${c.props.join("; ")}`] : []),
+    `- Signature pose (use when natural): ${c.signaturePose}`,
+  ].join("\n");
 }
 
 /**
@@ -129,6 +143,9 @@ export function buildCbnArtworkPrompt(ctx: CbnPromptContext): string {
   if (ctx.styleProfile) {
     sections.push(styleProfileSection(ctx.styleProfile));
   }
+  if (ctx.character) {
+    sections.push(characterSection(ctx.character));
+  }
   sections.push(COLOURING_PAGE_FORMAT_INSTRUCTION);
   return sections.join("\n\n");
 }
@@ -157,6 +174,9 @@ export function buildColouringPagePrompt(ctx: PagePromptContext): string {
   }
   if (ctx.styleProfile) {
     sections.push(styleProfileSection(ctx.styleProfile));
+  }
+  if (ctx.character) {
+    sections.push(characterSection(ctx.character));
   }
   if (ctx.pageText?.trim()) {
     sections.push(

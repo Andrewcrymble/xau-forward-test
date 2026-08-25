@@ -12,8 +12,14 @@ function parseListing(json: string | null): ListingContent | null {
   if (!json) return null;
   try {
     const parsed = JSON.parse(json) as ListingContent;
-    // Listings saved before category suggestions shipped lack the field.
+    // Listings saved before newer fields shipped lack them.
     parsed.categories ??= [];
+    parsed.authorNote ??= "";
+    parsed.insideBook ??= [];
+    parsed.launchPlan ??= [];
+    parsed.etsyTitle ??= "";
+    parsed.etsyTags ??= [];
+    parsed.etsyDescription ??= "";
     return parsed;
   } catch {
     return null;

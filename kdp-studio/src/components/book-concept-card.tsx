@@ -33,13 +33,18 @@ export function BookConceptCard({
   const [briefDirty, setBriefDirty] = useState(false);
   const [building, setBuilding] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [wantCharacter, setWantCharacter] = useState(!!initialConcept?.character);
   const [error, setError] = useState<string | null>(null);
 
   const build = async () => {
     setBuilding(true);
     setError(null);
     try {
-      const res = await fetch(`/api/projects/${projectId}/concept`, { method: "POST" });
+      const res = await fetch(`/api/projects/${projectId}/concept`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ includeCharacter: wantCharacter }),
+      });
       const json: ApiResponse<BookConcept> = await res.json();
       if (!json.ok) throw new Error(json.error);
       setConcept(json.data);
@@ -90,6 +95,16 @@ export function BookConceptCard({
               : "Build my book concept"}
         </Button>
       </div>
+      <label className="flex items-center gap-2 text-sm text-stone-700">
+        <input
+          type="checkbox"
+          className="h-4 w-4 accent-stone-900"
+          checked={wantCharacter}
+          onChange={(e) => setWantCharacter(e.target.checked)}
+        />
+        Include a recurring main character (locked look on every page — great
+        for children&apos;s books and series)
+      </label>
       {error && <p className="text-sm text-red-600">{error}</p>}
       {concept && (
         <>
@@ -134,6 +149,25 @@ export function BookConceptCard({
               )}
             </dl>
           </div>
+          {concept.character && (
+            <div className="rounded-lg border border-violet-200 bg-violet-50 px-3 py-2">
+              <span className="text-xs font-semibold uppercase tracking-wide text-violet-700">
+                Recurring character
+              </span>
+              <p className="mt-1 text-sm text-stone-800">
+                <strong>{concept.character.name}</strong> — {concept.character.description}
+              </p>
+              <ul className="mt-1 list-disc pl-4 text-xs text-stone-600">
+                {concept.character.signatureDetails.map((d, i) => (
+                  <li key={i}>{d}</li>
+                ))}
+                {concept.character.props.length > 0 && (
+                  <li>Props: {concept.character.props.join("; ")}</li>
+                )}
+                <li>Signature pose: {concept.character.signaturePose}</li>
+              </ul>
+            </div>
+          )}
           <p className="text-xs text-stone-400">
             Built {new Date(concept.builtAt).toLocaleString()}. Rebuild after
             changing the niche, tone or artwork theme; pages planned from now

@@ -1,4 +1,5 @@
 import JSZip from "jszip";
+import { PDFDocument } from "pdf-lib";
 import { prisma } from "@/lib/db";
 import { pruneOldExports } from "@/lib/services/maintenance-service";
 import { getImageStorage } from "@/lib/storage";
@@ -67,9 +68,49 @@ function listingToText(listing: ListingContent): string {
     "SHORT PROMO:",
     listing.shortPromo,
     "",
+    ...(listing.authorNote
+      ? ["AUTHOR NOTE (for Amazon A+ content):", listing.authorNote, ""]
+      : []),
+    ...(listing.insideBook?.length
+      ? ["INSIDE THIS BOOK:", ...listing.insideBook.map((b) => `- ${b}`), ""]
+      : []),
+    ...(listing.launchPlan?.length
+      ? [
+          "7-DAY LAUNCH PLAN (30-45 min/day, solo creator):",
+          ...listing.launchPlan.map((d) => `- ${d}`),
+          "",
+        ]
+      : []),
     "Note: keyword and category suggestions do not guarantee Amazon ranking.",
   ];
   return lines.join("\n");
+}
+
+function etsyListingToText(listing: ListingContent, pageCount: number): string {
+  return [
+    "ETSY DIGITAL DOWNLOAD LISTING",
+    "=============================",
+    "",
+    "TITLE (max 140 characters):",
+    listing.etsyTitle || listing.title,
+    "",
+    "TAGS (up to 13, max 20 characters each):",
+    ...(listing.etsyTags?.length
+      ? listing.etsyTags.map((t, i) => `${i + 1}. ${t}`)
+      : ["(regenerate the listing to get tag suggestions)"]),
+    "",
+    "DESCRIPTION:",
+    listing.etsyDescription || listing.description,
+    "",
+    `WHAT THE BUYER GETS: ${pageCount} printable colouring pages as high-resolution`,
+    "PNG files plus one print-at-home PDF (US Letter, 300 DPI).",
+    "",
+    "Listing setup: choose 'Digital files' as the listing type and attach the",
+    "PDF and/or PNGs from this pack (Etsy allows up to 5 files of 20MB each —",
+    "zip the PNGs if needed).",
+    "",
+    "Note: tag suggestions do not guarantee Etsy search ranking.",
+  ].join("\n");
 }
 
 export interface ExportReadiness {
@@ -79,6 +120,7 @@ export interface ExportReadiness {
   coverBuilt: boolean;
   listingReady: boolean;
   latestPackage: { url: string; builtAt: string } | null;
+  latestEtsyPack: { url: string; builtAt: string } | null;
 }
 
 export async function getExportReadiness(projectId: string): Promise<ExportReadiness> {
@@ -88,12 +130,16 @@ export async function getExportReadiness(projectId: string): Promise<ExportReadi
     where: { projectId },
     select: { approvalStatus: true, processedImage: true },
   });
-  const [interior, cover, listing, pkg] = await Promise.all([
+  const [interior, cover, listing, pkg, etsy] = await Promise.all([
     latestInteriorExport(projectId),
     latestCoverExport(projectId),
     getListing(projectId),
     prisma.export.findFirst({
       where: { projectId, type: "kdp_package" },
+      orderBy: { createdAt: "desc" },
+    }),
+    prisma.export.findFirst({
+      where: { projectId, type: "etsy_pack" },
       orderBy: { createdAt: "desc" },
     }),
   ]);
@@ -106,6 +152,9 @@ export async function getExportReadiness(projectId: string): Promise<ExportReadi
     latestPackage: pkg
       ? { url: pkg.filePath, builtAt: pkg.createdAt.toISOString() }
       : null,
+    latestEtsyPack: etsy
+      ? { url: etsy.filePath, builtAt: etsy.createdAt.toISOString() }
+      : null,
   };
 }
 
@@ -115,6 +164,79 @@ export interface PackageBuildResult {
   builtAt: string;
   contents: string[];
   imageCount: number;
+}
+
+/**
+ * Etsy printable pack: the approved pages as individual PNGs plus a simple
+ * print-at-home US Letter PDF and the Etsy listing text — everything needed
+ * to sell the same book as an instant digital download.
+ */
+export async function buildEtsyPack(projectId: string): Promise<PackageBuildResult> {
+  const project = await prisma.project.findUnique({ where: { id: projectId } });
+  if (!project) throw new PageServiceError("Project not found", 404);
+  const approvedPages = await prisma.colouringPage.findMany({
+    where: { projectId, approvalStatus: "approved", NOT: { processedImage: null } },
+    orderBy: { pageNumber: "asc" },
+  });
+  if (approvedPages.length === 0) {
+    throw new PageServiceError(
+      "No approved pages — approve pages in the Images tab before exporting.",
+      409,
+    );
+  }
+  const listing = await getListing(projectId);
+
+  const storage = getImageStorage();
+  const slug = slugify(project.name);
+  const zip = new JSZip();
+  const root = zip.folder(`${slug}-etsy-pack`)!;
+  const contents: string[] = [];
+
+  // Print-at-home PDF: one full US Letter page per image, no gutters or
+  // front matter — buyers just print it.
+  const pdf = await PDFDocument.create();
+  pdf.setTitle(`${project.title} — printable colouring pages`);
+  pdf.setProducer("KDP Colouring Book Studio");
+  const pagesDir = root.folder("pages")!;
+  for (let i = 0; i < approvedPages.length; i++) {
+    const bytes = await storage.readBytes(approvedPages[i].processedImage!);
+    const name = `${String(i + 1).padStart(3, "0")}.png`;
+    pagesDir.file(name, bytes);
+    const image = await pdf.embedPng(bytes);
+    const page = pdf.addPage([612, 792]); // US Letter in points
+    page.drawImage(image, { x: 0, y: 0, width: 612, height: 792 });
+  }
+  contents.push(
+    `${slug}-etsy-pack/pages/001.png … ${String(approvedPages.length).padStart(3, "0")}.png`,
+  );
+  root.file("print-at-home.pdf", Buffer.from(await pdf.save()));
+  contents.push(`${slug}-etsy-pack/print-at-home.pdf`);
+
+  if (listing) {
+    root.file("etsy-listing.txt", etsyListingToText(listing, approvedPages.length));
+    contents.push(`${slug}-etsy-pack/etsy-listing.txt`);
+  }
+
+  const buffer = await zip.generateAsync({ type: "nodebuffer", compression: "STORE" });
+  const buildNumber =
+    (await prisma.export.count({ where: { projectId, type: "etsy_pack" } })) + 1;
+  const url = await storage.put(
+    `projects/${projectId}/exports/${slug}-etsy-pack-v${buildNumber}.zip`,
+    buffer,
+    "application/zip",
+  );
+  const row = await prisma.export.create({
+    data: { projectId, type: "etsy_pack", filePath: url },
+  });
+  await pruneOldExports(projectId);
+
+  return {
+    url,
+    bytes: buffer.length,
+    builtAt: row.createdAt.toISOString(),
+    contents,
+    imageCount: approvedPages.length,
+  };
 }
 
 export async function buildKdpPackage(projectId: string): Promise<PackageBuildResult> {

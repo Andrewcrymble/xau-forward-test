@@ -2,7 +2,12 @@
 // directly — always through these interfaces, so providers can be added or
 // swapped via configuration. API keys exist server-side only.
 
-import type { BookStyleProfile, NicheScores, NicheSeriesIdea } from "@/lib/types";
+import type {
+  BookStyleProfile,
+  NicheScores,
+  NicheSeriesIdea,
+  RecurringCharacter,
+} from "@/lib/types";
 
 /** One planned colouring-page concept, before it is stored. */
 export interface PageConceptDraft {
@@ -31,6 +36,8 @@ export interface BookPlanRequest {
   artworkTheme?: string | null;
   /** Creative brief from the Book Concept builder, when built. */
   creativeBrief?: string | null;
+  /** Recurring main character to feature across the book, when set. */
+  character?: RecurringCharacter | null;
   /** Number of unique page concepts to produce. */
   count: number;
   /** Mixed-mode: how many of the concepts should be colour-by-numbers pages
@@ -86,6 +93,12 @@ export interface ListingDraft {
   audience: string;
   backCoverDescription: string;
   shortPromo: string;
+  authorNote: string;
+  insideBook: string[];
+  launchPlan: string[];
+  etsyTitle: string;
+  etsyTags: string[];
+  etsyDescription: string;
 }
 
 // ---------------------------------------------------------------------------
@@ -104,11 +117,14 @@ export interface BookConceptRequest {
   complexity: string;
   pageCount: number;
   colouringMode: string;
+  /** Invent a recurring main character locked across the whole book. */
+  includeCharacter?: boolean;
 }
 
 export interface BookConceptDraft {
   creativeBrief: string;
   styleProfile: BookStyleProfile;
+  character?: RecurringCharacter | null;
 }
 
 // ---------------------------------------------------------------------------

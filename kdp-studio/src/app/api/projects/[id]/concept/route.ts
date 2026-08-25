@@ -8,12 +8,18 @@ type Ctx = { params: Promise<{ id: string }> };
 
 /** Build (or rebuild) the book concept + style profile. */
 export async function POST(
-  _req: NextRequest,
+  req: NextRequest,
   ctx: Ctx,
 ): Promise<NextResponse<ApiResponse<BookConcept>>> {
   const { id } = await ctx.params;
   try {
-    return NextResponse.json({ ok: true, data: await buildBookConcept(id) });
+    const body = await req.json().catch(() => ({}));
+    return NextResponse.json({
+      ok: true,
+      data: await buildBookConcept(id, {
+        includeCharacter: body?.includeCharacter === true,
+      }),
+    });
   } catch (err) {
     return apiError(`POST /api/projects/${id}/concept`, err);
   }

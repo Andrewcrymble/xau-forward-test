@@ -125,6 +125,31 @@ export class MockTextProvider implements TextAIProvider {
       backCoverDescription:
         `${req.pageCount} beautiful ${n.toLowerCase()} colouring pages, printed single-sided for every kind of pen and pencil. Sample text — generate real copy with an AI key.`,
       shortPromo: `Unwind with ${req.pageCount} gorgeous ${n.toLowerCase()} colouring pages.`,
+      authorNote:
+        `SAMPLE AUTHOR NOTE — add an AI provider key for real copy. ` +
+        `I made this ${n.toLowerCase()} colouring book because I wanted pages that are genuinely relaxing to colour: ` +
+        `clear lines, generous spaces, and scenes worth spending time in. I hope it brings you a quiet moment. Happy colouring!`,
+      insideBook: [
+        `${req.pageCount} single-sided colouring pages`,
+        `Large 8.5 × 11 inch pages`,
+        `A colour test page for your pens and pencils`,
+        `Clear bold outlines designed for ${req.audience}`,
+        "Sample bullet — replace with real AI copy",
+      ],
+      launchPlan: Array.from({ length: 7 }, (_, i) =>
+        `Day ${i + 1} — Sample launch action ${i + 1} (add an AI key for a real 7-day plan).`,
+      ),
+      etsyTitle: `${n} Colouring Pages, Printable PDF Colouring Book, ${req.pageCount} Pages, Instant Digital Download`.slice(0, 140),
+      etsyTags: [
+        "colouring pages", "printable", "digital download", "colouring book",
+        "adult colouring", "kids colouring", "instant download", "pdf colouring",
+        "print at home", "colouring sheets", "relaxing craft", "activity pages",
+        n.toLowerCase().slice(0, 20),
+      ].map((t) => t.slice(0, 20)),
+      etsyDescription:
+        `SAMPLE ETSY LISTING — add an AI key for real copy.\n\n` +
+        `Instant digital download: ${req.pageCount} printable ${n.toLowerCase()} colouring pages. ` +
+        `Print at home on US Letter (8.5 × 11 in) paper as many times as you like. No physical item is shipped.`,
     };
     return {
       listing,
@@ -164,6 +189,19 @@ export class MockTextProvider implements TextAIProvider {
         recurringMotifs: motifs,
         levelOfDetail: req.complexity,
       },
+      character: req.includeCharacter
+        ? {
+            name: "Sample Sam",
+            description: `A friendly ${req.niche.toLowerCase()} mascot (sample — add an AI key for a real character).`,
+            signatureDetails: [
+              "a small round patch over the left eye",
+              "three buttons down the front",
+              "one bent ear/antenna",
+            ],
+            props: ["a tiny satchel", "an oversized pencil"],
+            signaturePose: "waving with one arm raised high",
+          }
+        : null,
     };
     return {
       concept,

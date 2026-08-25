@@ -109,9 +109,29 @@ export function ExportScreen({
     }
   };
 
+  const [etsyBuilding, setEtsyBuilding] = useState(false);
+  const [etsyResult, setEtsyResult] = useState<PackageBuildResult | null>(null);
+
+  const buildEtsy = async () => {
+    setEtsyBuilding(true);
+    setError(null);
+    try {
+      setEtsyResult(
+        await api<PackageBuildResult>(`/api/projects/${project.id}/export/etsy`, {
+          method: "POST",
+        }),
+      );
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Etsy pack build failed");
+    } finally {
+      setEtsyBuilding(false);
+    }
+  };
+
   const r = readiness;
   const base = `/projects/${project.id}`;
   const download = result?.url ?? r.latestPackage?.url ?? null;
+  const etsyDownload = etsyResult?.url ?? r.latestEtsyPack?.url ?? null;
 
   return (
     <div className="space-y-5">
@@ -284,6 +304,49 @@ export function ExportScreen({
           )}
         </Card>
       </div>
+
+      <Card className="space-y-3">
+        <div>
+          <h2 className="text-base font-semibold text-stone-900">
+            Etsy printable pack
+          </h2>
+          <p className="text-xs text-stone-500">
+            Sell the same book as an instant digital download: every approved
+            page as a high-resolution PNG, one print-at-home PDF (US Letter,
+            300 DPI, no book margins), and{" "}
+            <code className="rounded bg-stone-100 px-1">etsy-listing.txt</code>{" "}
+            with a download-focused title, up to 13 tags and a description.
+          </p>
+        </div>
+        <div className="flex flex-wrap items-center gap-3">
+          <Button
+            variant="secondary"
+            onClick={buildEtsy}
+            disabled={etsyBuilding || r.approvedPages === 0}
+          >
+            {etsyBuilding ? "Packing…" : "Build Etsy Printable Pack"}
+          </Button>
+          {etsyDownload && (
+            <a
+              href={etsyDownload}
+              className="text-sm font-semibold text-stone-900 underline underline-offset-2"
+            >
+              Download {etsyResult ? "Etsy pack" : "latest Etsy pack"}
+            </a>
+          )}
+        </div>
+        {etsyResult && (
+          <p className="text-xs text-emerald-700">
+            Packed {etsyResult.imageCount} pages ·{" "}
+            {(etsyResult.bytes / 1024 / 1024).toFixed(1)} MB — tap Download above.
+          </p>
+        )}
+        {!etsyResult && r.latestEtsyPack && (
+          <p className="text-xs text-stone-500">
+            Last packed {new Date(r.latestEtsyPack.builtAt).toLocaleString()}
+          </p>
+        )}
+      </Card>
 
       <Card>
         <h2 className="mb-1 text-base font-semibold text-stone-900">

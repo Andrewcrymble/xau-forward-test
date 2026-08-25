@@ -428,6 +428,7 @@ function buildCbnPromptForPage(
         : null,
     creativeBrief: concept?.creativeBrief ?? null,
     styleProfile: concept?.styleProfile ?? null,
+    character: concept?.character ?? null,
   });
 }
 

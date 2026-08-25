@@ -14,7 +14,10 @@ import type { BookConcept, BookStyleProfile } from "@/lib/types";
 // a persistent creative brief + Book Style Profile, stored on the project
 // and injected into every image-generation prompt from then on.
 
-export async function buildBookConcept(projectId: string): Promise<BookConcept> {
+export async function buildBookConcept(
+  projectId: string,
+  opts?: { includeCharacter?: boolean },
+): Promise<BookConcept> {
   const project = await prisma.project.findUnique({ where: { id: projectId } });
   if (!project) throw new PageServiceError("Project not found", 404);
 
@@ -38,11 +41,13 @@ export async function buildBookConcept(projectId: string): Promise<BookConcept> 
     complexity: complexityPromptText(project.complexity),
     pageCount: project.numberOfDesigns,
     colouringMode: project.colouringMode,
+    includeCharacter: opts?.includeCharacter ?? false,
   });
 
   const stored: BookConcept = {
     creativeBrief: concept.creativeBrief,
     styleProfile: concept.styleProfile,
+    character: opts?.includeCharacter ? (concept.character ?? null) : null,
     builtAt: new Date().toISOString(),
   };
   await prisma.project.update({
@@ -76,6 +81,7 @@ export async function updateBookConcept(
   const updated: BookConcept = {
     creativeBrief: input.creativeBrief ?? current.creativeBrief,
     styleProfile: { ...current.styleProfile, ...(input.styleProfile ?? {}) },
+    character: current.character ?? null,
     builtAt: current.builtAt,
   };
   await prisma.project.update({

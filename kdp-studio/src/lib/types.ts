@@ -144,11 +144,25 @@ export interface BookStyleProfile {
   levelOfDetail: string;
 }
 
+/** Optional recurring main character, locked across every page so a series
+ *  stays visually consistent (great for children's books). */
+export interface RecurringCharacter {
+  name: string;
+  description: string;
+  /** Signature visual details the artwork must keep identical on every page. */
+  signatureDetails: string[];
+  /** Recurring props that can appear alongside the character. */
+  props: string[];
+  signaturePose: string;
+}
+
 /** Creative direction produced by BUILD MY BOOK CONCEPT, JSON-encoded on
  *  Project.bookConcept. */
 export interface BookConcept {
   creativeBrief: string;
   styleProfile: BookStyleProfile;
+  /** Present when the user asked for a recurring main character. */
+  character?: RecurringCharacter | null;
   builtAt: string;
 }
 
@@ -286,6 +300,17 @@ export interface ListingContent {
   audience: string;
   backCoverDescription: string;
   shortPromo: string;
+  /** First-person author note for Amazon A+ content (~200 words). */
+  authorNote: string;
+  /** "Inside this book" bullets for A+ content / the description. */
+  insideBook: string[];
+  /** 7-day solo-creator launch plan, one entry per day ("Day 1 — …"). */
+  launchPlan: string[];
+  /** Etsy digital-download listing: title (≤140 chars), up to 13 tags
+   *  (each ≤20 chars), and a download-focused description. */
+  etsyTitle: string;
+  etsyTags: string[];
+  etsyDescription: string;
 }
 
 /** Cover state as exposed to the UI. */

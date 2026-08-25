@@ -246,6 +246,88 @@ export function ListingScreen({
           </Card>
 
           <Card className="space-y-3">
+            <h2 className="text-base font-semibold text-stone-900">Author note & A+ content</h2>
+            <Field label="Author note (~200 words, first person — for Amazon A+ content)">
+              <TextArea
+                rows={5}
+                value={listing.authorNote}
+                onChange={(e) => patch({ authorNote: e.target.value })}
+              />
+            </Field>
+            <Field label="“Inside this book” bullets (one per line)">
+              <TextArea
+                rows={5}
+                value={listing.insideBook.join("\n")}
+                onChange={(e) =>
+                  patch({ insideBook: e.target.value.split("\n").filter((l) => l.trim()) })
+                }
+              />
+            </Field>
+          </Card>
+
+          <Card className="space-y-3">
+            <h2 className="text-base font-semibold text-stone-900">Etsy digital download</h2>
+            <p className="text-xs text-stone-500">
+              Copy for selling this book as a printable download — the Export
+              tab builds the matching Etsy pack (page PNGs + print-at-home
+              PDF). Title max 140 characters; up to 13 tags of 20 characters
+              each.
+            </p>
+            <Field label="Etsy title">
+              <TextInput
+                value={listing.etsyTitle}
+                onChange={(e) => patch({ etsyTitle: e.target.value })}
+              />
+            </Field>
+            <Count value={listing.etsyTitle.length} max={140} />
+            <Field label="Tags (one per line, max 13 × 20 characters)">
+              <TextArea
+                rows={5}
+                value={listing.etsyTags.join("\n")}
+                onChange={(e) =>
+                  patch({
+                    etsyTags: e.target.value
+                      .split("\n")
+                      .map((t) => t.trim())
+                      .filter(Boolean)
+                      .slice(0, 13),
+                  })
+                }
+              />
+            </Field>
+            <Field label="Etsy description">
+              <TextArea
+                rows={5}
+                value={listing.etsyDescription}
+                onChange={(e) => patch({ etsyDescription: e.target.value })}
+              />
+            </Field>
+          </Card>
+
+          <Card className="space-y-3">
+            <h2 className="text-base font-semibold text-stone-900">7-day launch plan</h2>
+            <p className="text-xs text-stone-500">
+              A realistic solo-creator plan (30–45 minutes a day). Edit freely
+              — it&apos;s included in the KDP package&apos;s listing file.
+            </p>
+            {listing.launchPlan.length > 0 ? (
+              <TextArea
+                rows={7}
+                value={listing.launchPlan.join("\n")}
+                onChange={(e) =>
+                  patch({
+                    launchPlan: e.target.value.split("\n").filter((l) => l.trim()).slice(0, 7),
+                  })
+                }
+              />
+            ) : (
+              <p className="text-sm text-stone-500">
+                No launch plan yet — regenerate the listing to get a 7-day plan.
+              </p>
+            )}
+          </Card>
+
+          <Card className="space-y-3">
             <h2 className="text-base font-semibold text-stone-900">Audience & promo</h2>
             <Field label="Audience description">
               <TextArea rows={2} value={listing.audience} onChange={(e) => patch({ audience: e.target.value })} />

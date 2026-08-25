@@ -137,6 +137,7 @@ function composePrompt(
     tones: parseTones(project),
     artworkTheme: project.artworkTheme,
     creativeBrief: bookConcept?.creativeBrief ?? null,
+    character: bookConcept?.character ?? null,
     styleProfile: bookConcept?.styleProfile ?? null,
     pageText: pageText ?? null,
     previousPageSummaries: siblingTitles.slice(0, MAX_SIBLING_TITLES_IN_PROMPT),
@@ -158,6 +159,7 @@ function planRequestBase(project: ProjectForPrompts) {
     tones: parseTones(project),
     artworkTheme: project.artworkTheme,
     creativeBrief: bookConcept?.creativeBrief ?? null,
+    character: bookConcept?.character ?? null,
     bible: bible.enabled
       ? {
           translation:

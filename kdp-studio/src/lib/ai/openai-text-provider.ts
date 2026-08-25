@@ -69,6 +69,7 @@ function planSystemPrompt(): string {
     "Every concept must be a single self-contained scene suitable for one black-and-white line-art colouring page.",
     "Across the whole list, deliberately vary: composition, main subject, background, perspective/viewpoint, decorative elements, framing, foreground/background balance, and central versus asymmetrical layouts.",
     "Avoid duplicate subject matter, identical camera angles, repeated central compositions, the same background on every page, and slight variations of the same scene.",
+    "Rotate composition TYPES through the list so no two adjacent pages feel alike: intimate close-ups, full scenes with fore/mid/background, and the occasional decorative pattern or motif page built from the book's imagery.",
     "Keep one consistent illustration style so the pages read as the SAME professionally illustrated book.",
     "Concepts must be family-friendly and appropriate for the stated audience.",
     "Do not mention colours or shading in concepts.",
@@ -94,6 +95,13 @@ function planUserPrompt(req: BookPlanRequest, count: number): string {
     parts.push(`Recurring imagery to draw from across the book: ${req.artworkTheme.trim()}`);
   if (req.creativeBrief?.trim())
     parts.push(`CREATIVE BRIEF for the whole book:\n${req.creativeBrief.trim()}`);
+  if (req.character) {
+    parts.push(
+      `RECURRING MAIN CHARACTER: ${req.character.name} — ${req.character.description}. ` +
+        `Feature ${req.character.name} in most pages, doing something different in a different setting each time; ` +
+        `a few character-free scenery or pattern pages are welcome for variety.`,
+    );
+  }
   if (req.description?.trim()) parts.push(`Extra notes from the author: ${req.description.trim()}`);
   if (req.bible) {
     parts.push(
@@ -237,6 +245,10 @@ export class OpenAITextProvider implements TextAIProvider {
       "The Amazon title must be under 200 characters; the description 600-1500 characters, written as flowing paragraphs (plain text, no markdown).",
       "The back-cover description is 2-4 short sentences suitable for print.",
       "The short promo is a single sentence for ads/social.",
+      "Author note: ~200 words, first person, warm and genuine — why this book was made and how to enjoy it (suits Amazon A+ content).",
+      "Inside-this-book: 5-6 short bullets describing concretely what buyers get (page count, style, paper-friendly single-sided pages, any special page types).",
+      "Launch plan: exactly 7 entries, 'Day 1 — …' to 'Day 7 — …', realistic for a solo creator with 30-45 minutes a day and no audience; each entry names one concrete action (a post, a listing improvement, a metric to check). Never promise results.",
+      "Etsy pack: also write a digital-download version of the listing — an Etsy title up to 140 characters, exactly 13 tags of at most 20 characters each (lowercase, buyer search phrases), and a description that explains it's a printable PDF/PNG download the buyer prints at home.",
     ].join(" ");
     const user = [
       `Book title: ${req.bookTitle}`,
@@ -250,7 +262,7 @@ export class OpenAITextProvider implements TextAIProvider {
       req.pageTitles.length > 0
         ? `Example pages: ${req.pageTitles.slice(0, 15).join("; ")}`
         : "",
-      "Produce: 4 title suggestions, a recommended title and subtitle, the product description, 4-6 bullet-style sales points, exactly 7 keywords, exactly 3 suggested browse categories, a one-sentence audience description, a back-cover description, and a short promotional sentence.",
+      "Produce: 4 title suggestions, a recommended title and subtitle, the product description, 4-6 bullet-style sales points, exactly 7 keywords, exactly 3 suggested browse categories, a one-sentence audience description, a back-cover description, a short promotional sentence, the author note, the inside-this-book bullets, the 7-day launch plan, and the Etsy title/tags/description.",
     ]
       .filter(Boolean)
       .join("\n");
@@ -277,10 +289,26 @@ export class OpenAITextProvider implements TextAIProvider {
           audience: { type: "string" },
           backCoverDescription: { type: "string" },
           shortPromo: { type: "string" },
+          authorNote: { type: "string" },
+          insideBook: { type: "array", items: { type: "string" } },
+          launchPlan: {
+            type: "array",
+            items: { type: "string" },
+            description: "Exactly 7 entries, 'Day 1 — …' to 'Day 7 — …'",
+          },
+          etsyTitle: { type: "string" },
+          etsyTags: {
+            type: "array",
+            items: { type: "string" },
+            description: "Exactly 13 tags, each at most 20 characters",
+          },
+          etsyDescription: { type: "string" },
         },
         required: [
           "titleSuggestions", "title", "subtitle", "description", "bulletPoints",
           "keywords", "categories", "audience", "backCoverDescription", "shortPromo",
+          "authorNote", "insideBook", "launchPlan", "etsyTitle", "etsyTags",
+          "etsyDescription",
         ],
       },
     };
@@ -317,6 +345,13 @@ export class OpenAITextProvider implements TextAIProvider {
       listing.keywords.push(`${listing.keywords.length + 1} colouring book`);
     }
     listing.categories = (listing.categories ?? []).filter(Boolean).slice(0, 3);
+    listing.insideBook = (listing.insideBook ?? []).filter(Boolean).slice(0, 6);
+    listing.launchPlan = (listing.launchPlan ?? []).filter(Boolean).slice(0, 7);
+    listing.etsyTitle = (listing.etsyTitle ?? "").slice(0, 140);
+    listing.etsyTags = (listing.etsyTags ?? [])
+      .map((t) => t.trim().toLowerCase().slice(0, 20))
+      .filter(Boolean)
+      .slice(0, 13);
     return {
       listing,
       usage: {
@@ -364,8 +399,39 @@ export class OpenAITextProvider implements TextAIProvider {
               "overallAesthetic", "recurringMotifs", "levelOfDetail",
             ],
           },
+          ...(req.includeCharacter
+            ? {
+                character: {
+                  type: "object",
+                  additionalProperties: false,
+                  properties: {
+                    name: { type: "string" },
+                    description: { type: "string" },
+                    signatureDetails: {
+                      type: "array",
+                      items: { type: "string" },
+                      description:
+                        "Exactly 3 visual details the artwork must keep identical on every page",
+                    },
+                    props: {
+                      type: "array",
+                      items: { type: "string" },
+                      description: "2 recurring props",
+                    },
+                    signaturePose: { type: "string" },
+                  },
+                  required: [
+                    "name", "description", "signatureDetails", "props", "signaturePose",
+                  ],
+                },
+              }
+            : {}),
         },
-        required: ["creativeBrief", "styleProfile"],
+        required: [
+          "creativeBrief",
+          "styleProfile",
+          ...(req.includeCharacter ? ["character"] : []),
+        ],
       },
     };
     const system = [
@@ -373,6 +439,13 @@ export class OpenAITextProvider implements TextAIProvider {
       "The brief must communicate the book's positive emotional intent, its visual themes, and that the collection must feel cohesive while every page stays distinct.",
       "The style profile is short, concrete art direction (a phrase per field) that will be injected into EVERY image-generation prompt so all pages look like the same illustrator drew them.",
       "Fields that don't apply to this niche (e.g. architecturalStyle for a purely botanical book) should say how to handle that element IF it appears, not 'N/A'.",
+      ...(req.includeCharacter
+        ? [
+            "Also invent ONE recurring main character to appear throughout the book and any sequels:",
+            "a memorable name, a one-line description, exactly 3 signature visual details an illustrator can lock to for line-art consistency, 2 recurring props, and one signature pose.",
+            "Keep the character simple enough to stay consistent in black-and-white line art.",
+          ]
+        : []),
     ].join(" ");
     const user = [
       `Main niche: ${req.niche}`,
