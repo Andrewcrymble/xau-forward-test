@@ -5,6 +5,7 @@ import { getImageProvider } from "@/lib/ai";
 import type { GeneratedImage } from "@/lib/ai/types";
 import { getImageStorage } from "@/lib/storage";
 import { normaliseToPrintCanvas } from "@/lib/images/normalise";
+import { overlayPageText } from "@/lib/images/verse-overlay";
 import { processColourByNumbers } from "@/lib/images/colour-by-numbers";
 import {
   buildCbnArtworkPrompt,
@@ -239,9 +240,19 @@ export async function generatePageImage(pageId: string): Promise<PageDto> {
     if (result.report.status === "failed") {
       throw new Error(result.report.issues.join("; "));
     }
+    // Intentional text (verses, quotes) is typeset by the app — the image AI
+    // never draws words, because image models garble long text.
+    let printBytes = result.processed;
+    if (page.pageText?.trim()) {
+      try {
+        printBytes = await overlayPageText(printBytes, page.pageText);
+      } catch (err) {
+        console.warn("verse overlay failed, keeping plain page:", err);
+      }
+    }
     const processedUrl = await storage.put(
       `${keyBase}-print.png`,
-      result.processed,
+      printBytes,
       "image/png",
     );
 

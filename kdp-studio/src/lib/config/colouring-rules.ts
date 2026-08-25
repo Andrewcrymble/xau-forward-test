@@ -179,10 +179,12 @@ export function buildColouringPagePrompt(ctx: PagePromptContext): string {
     sections.push(characterSection(ctx.character));
   }
   if (ctx.pageText?.trim()) {
+    // Image models garble long text, so the words are NEVER drawn by the AI:
+    // the app typesets them itself onto the finished page (verse-overlay).
     sections.push(
-      "INTENTIONAL TEXT: this page intentionally includes the following text as part of the artwork: " +
-        `"${ctx.pageText.trim()}". Render this text EXACTLY as given, in elegant hand-lettered outline style suitable for colouring, well inside the safe margins. ` +
-        "Apart from this exact text, add no other words.",
+      "TEXT PANEL SPACE: a text panel will be added to this page separately after generation. " +
+        "Keep roughly the bottom quarter of the page simple and uncluttered to leave room for it, " +
+        "and do NOT draw any words, letters, numbers or writing anywhere on the page.",
     );
   }
 

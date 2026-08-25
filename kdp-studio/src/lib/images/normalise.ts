@@ -137,13 +137,18 @@ export async function normaliseToPrintCanvas(input: Buffer): Promise<NormaliseRe
     const CLEAN_BLACK_BELOW = 96; // ≤ this → pure black
     const CLEAN_WHITE_ABOVE = 184; // ≥ this → pure white
     const slope = 255 / (CLEAN_WHITE_ABOVE - CLEAN_BLACK_BELOW);
-    const fitted = await sharp(input)
+    // Separate passes so the order is guaranteed (sharp reorders operations
+    // inside one pipeline): resize → sharpen the edges → contrast stretch.
+    const resized = await sharp(input)
       .flatten({ background: "#ffffff" })
       .resize(CANVAS_W - SAFE_INSET * 2, CANVAS_H - SAFE_INSET * 2, {
         fit: "inside",
         withoutEnlargement: false,
       })
       .greyscale()
+      .toBuffer();
+    const sharpened = await sharp(resized).sharpen({ sigma: 1.2 }).toBuffer();
+    const fitted = await sharp(sharpened)
       .linear(slope, -CLEAN_BLACK_BELOW * slope)
       .toBuffer();
     processed = await sharp({

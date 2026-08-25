@@ -1,41 +1,6 @@
-import fs from "node:fs";
-import path from "node:path";
 import sharp from "sharp";
-import { parse as parseFont, type Font } from "opentype.js";
 import { INTERIOR_IMAGE } from "@/lib/config/kdp-spec";
-
-// All text on CBN pages (region numbers, colour key) is drawn as VECTOR
-// PATHS extracted from the app's bundled fonts — never as SVG <text>.
-// SVG text needs system fonts at rasterisation time and serverless deploys
-// ship none, so <text> would silently render as nothing in production.
-const fontCache = new Map<string, Font>();
-function bundledFont(file: string): Font {
-  let font = fontCache.get(file);
-  if (!font) {
-    const buf = fs.readFileSync(path.join(process.cwd(), "src", "assets", "fonts", file));
-    font = parseFont(buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength));
-    fontCache.set(file, font);
-  }
-  return font;
-}
-
-/** SVG <path> for a piece of text, vertically centred on y. */
-function textPath(
-  text: string,
-  x: number,
-  y: number,
-  size: number,
-  opts: { bold?: boolean; anchor?: "middle" | "start"; fill?: string; halo?: number },
-): string {
-  const font = bundledFont(opts.bold ? "LiberationSans-Bold.ttf" : "LiberationSans-Regular.ttf");
-  const capHeight = ((font.tables.os2?.sCapHeight ?? font.ascender * 0.72) / font.unitsPerEm) * size;
-  const px = opts.anchor === "middle" ? x - font.getAdvanceWidth(text, size) / 2 : x;
-  const d = font.getPath(text, px, y + capHeight / 2, size).toPathData(2);
-  const halo = opts.halo
-    ? ` stroke="#ffffff" stroke-width="${opts.halo}" paint-order="stroke" stroke-linejoin="round"`
-    : "";
-  return `<path d="${d}" fill="${opts.fill ?? "#111111"}"${halo}/>`;
-}
+import { textPath } from "@/lib/images/text-paths";
 
 // Colour-by-numbers processing pipeline. The image AI only supplies a
 // flat-colour illustration; everything numbers-related is PROGRAMMATIC:
@@ -563,7 +528,7 @@ export async function processColourByNumbers(
     const fontSize = m.size * scale;
     svgParts.push(
       textPath(String(m.number), x, y, fontSize, {
-        bold: true,
+        face: "sans-bold",
         anchor: "middle",
         halo: Math.max(2, fontSize * 0.14),
       }),
@@ -585,8 +550,8 @@ export async function processColourByNumbers(
       const numberFill = !withColours || lightSwatch ? "#111111" : "#ffffff";
       parts.push(
         `<circle cx="${cx}" cy="${cy}" r="36" fill="${withColours ? p.hex : "#ffffff"}" stroke="#111111" stroke-width="4"/>`,
-        textPath(String(p.number), cx, cy, 40, { bold: true, anchor: "middle", fill: numberFill }),
-        textPath(p.name, cx + 52, cy, 38, {}),
+        textPath(String(p.number), cx, cy, 40, { face: "sans-bold", anchor: "middle", fill: numberFill }),
+        textPath(p.name, cx + 52, cy, 38),
       );
     });
     return parts.join("");
