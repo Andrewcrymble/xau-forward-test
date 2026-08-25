@@ -31,6 +31,7 @@ const BOOK_TYPE_LABELS: Record<string, string> = {
 
 export function NicheCard({
   idea,
+  isNew = false,
   busy,
   onStatus,
   onGoDeeper,
@@ -41,6 +42,7 @@ export function NicheCard({
   onUpdated,
 }: {
   idea: NicheIdeaDto;
+  isNew?: boolean;
   busy: boolean;
   onStatus: (id: string, status: NicheStatus) => Promise<void>;
   onGoDeeper: (idea: NicheIdeaDto) => void;
@@ -77,12 +79,24 @@ export function NicheCard({
     <div className="flex flex-col rounded-xl border border-stone-200 bg-white p-4 shadow-sm">
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
-          <h3 className="text-sm font-bold text-stone-900">{idea.name}</h3>
+          <h3 className="text-sm font-bold text-stone-900">
+            {isNew && (
+              <span className="mr-1.5 inline-block rounded-full bg-emerald-100 px-1.5 py-0.5 align-middle text-[9px] font-bold uppercase tracking-wide text-emerald-700">
+                New
+              </span>
+            )}
+            {idea.name}
+          </h3>
           {idea.path.length > 1 && (
             <p className="mt-0.5 text-[11px] text-stone-500">
               {idea.path.join(" → ")}
             </p>
           )}
+          <p className="mt-0.5 text-[10px] text-stone-400">
+            Added {new Date(idea.createdAt).toLocaleDateString(undefined, {
+              day: "numeric", month: "short", year: "numeric",
+            })}
+          </p>
         </div>
         {s && (
           <span

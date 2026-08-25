@@ -52,6 +52,7 @@ const BOOK_TYPES = [
 ] as const;
 
 const SORTS: [string, string][] = [
+  ["newest", "Newest first"],
   ["overall", "Best overall"],
   ["specificity", "Most specific"],
   ["giftPotential", "Best gift potential"],
@@ -195,6 +196,7 @@ export function NicheFinder({ initialIdeas }: { initialIdeas: NicheIdeaDto[] }) 
       );
     }
     const score = (n: NicheIdeaDto, key: string): number => {
+      if (key === "newest") return Date.parse(n.createdAt) || 0;
       const s = n.scores;
       if (!s) return 0;
       if (key === "children")
@@ -355,6 +357,7 @@ export function NicheFinder({ initialIdeas }: { initialIdeas: NicheIdeaDto[] }) 
           <NicheCard
             key={idea.id}
             idea={idea}
+            isNew={latestBatch?.has(idea.id) ?? false}
             busy={busyId === idea.id || finding}
             onStatus={setStatus}
             onGoDeeper={goDeeper}
